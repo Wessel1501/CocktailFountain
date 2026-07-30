@@ -332,10 +332,11 @@
     display:flex; flex-direction:column; gap:4px;
   }
   details.recipe > summary::-webkit-details-marker{display:none;}
-  .summary-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap; width:100%;}
+  .summary-name-row{display:flex; align-items:center; gap:14px; width:100%;}
+  .summary-badges-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%;}
   .ing-preview{
     font-family:'Inter',sans-serif; font-size:0.8rem; color:var(--ink-soft);
-    padding-left:40px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .glass-icon{flex-shrink:0; color:var(--ink-soft);}
   .r-name{font-family:'Fraunces',serif; font-weight:600; font-size:1.1rem; margin-right:auto; color:var(--ink);}
@@ -436,7 +437,6 @@
     .row-search{grid-template-columns:1fr;}
     .row-3col{grid-template-columns:1fr 1fr;}
     .tag-price, .tag-difficulty{display:none;}
-    .ing-preview{padding-left:56px;}
   }
 </style>
 </head>
@@ -1686,16 +1686,18 @@
 
       det.innerHTML = `
         <summary>
-          <div class="summary-row">
+          <div class="summary-name-row">
             ${icon}
             <span class="r-name">${escapeHTML(r.name)}</span>
+            <span class="arrow">›</span>
+          </div>
+          <div class="summary-badges-row">
             ${r.category ? `<span class="tag tag-cat">${escapeHTML(r.category)}</span>` : ''}
             ${r.method ? `<span class="tag tag-method">${escapeHTML(r.method)}</span>` : ''}
             <span class="tag tag-difficulty tag-diff-${r.difficulty}">${escapeHTML(r.difficulty)}</span>
             ${makeableNow ? '<span class="tag tag-makeable-yes">✓ Makeable</span>' : '<span class="tag tag-makeable-no">Missing ingredient</span>'}
             ${priceEst ? `<span class="tag tag-price" title="${priceEst.complete ? 'Estimated price based on your stock prices' : `Missing price: ${escapeHTML(priceEst.missingNames.join(', '))}`}">${priceEst.complete ? '' : '~'}€${priceEst.total.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` : ''}
             ${ratingBadgeHTML(r.rating)}
-            <span class="arrow">›</span>
           </div>
           ${ingPreview ? `<div class="ing-preview">${escapeHTML(ingPreview)}</div>` : ''}
         </summary>
