@@ -435,6 +435,8 @@
     .stock-item .stock-price{width:auto; flex:1 1 80px;}
     .row-search{grid-template-columns:1fr;}
     .row-3col{grid-template-columns:1fr 1fr;}
+    .tag-price, .tag-difficulty{display:none;}
+    .ing-preview{padding-left:56px;}
   }
 </style>
 </head>
@@ -1689,7 +1691,7 @@
             <span class="r-name">${escapeHTML(r.name)}</span>
             ${r.category ? `<span class="tag tag-cat">${escapeHTML(r.category)}</span>` : ''}
             ${r.method ? `<span class="tag tag-method">${escapeHTML(r.method)}</span>` : ''}
-            <span class="tag tag-diff-${r.difficulty}">${escapeHTML(r.difficulty)}</span>
+            <span class="tag tag-difficulty tag-diff-${r.difficulty}">${escapeHTML(r.difficulty)}</span>
             ${makeableNow ? '<span class="tag tag-makeable-yes">✓ Makeable</span>' : '<span class="tag tag-makeable-no">Missing ingredient</span>'}
             ${priceEst ? `<span class="tag tag-price" title="${priceEst.complete ? 'Estimated price based on your stock prices' : `Missing price: ${escapeHTML(priceEst.missingNames.join(', '))}`}">${priceEst.complete ? '' : '~'}€${priceEst.total.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` : ''}
             ${ratingBadgeHTML(r.rating)}
