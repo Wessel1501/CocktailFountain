@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cocktail Fountain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#F5F1E4;
+    --paper-alt:#EEE8D4;
+    --surface:#FFFFFF;
+    --ink:#22281F;
+    --ink-soft:#5B6152;
+    --accent:#A6402C;
+    --accent-soft:#F0DCCF;
+    --herb:#6B7A4F;
+    --herb-soft:#E4E9D8;
+    --border:#DED5BE;
+    --shadow:rgba(34,40,31,0.10);
+    --radius:10px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+  }
+
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(34,40,31,0.025) 0, transparent 40%),
+      radial-gradient(circle at 80% 60%, rgba(34,40,31,0.02) 0, transparent 45%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .wrap{
+    max-width:980px;
+    margin:0 auto;
+    padding:48px 24px 96px;
+    position:relative;
+    z-index:1;
+  }
+
+  /* ---------- Header ---------- */
+  header.top{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:24px;
+    margin-bottom:8px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand svg{flex-shrink:0;}
+  .brand h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:2.5rem;
+    letter-spacing:-0.01em;
+    margin:0;
+    color:var(--ink);
+  }
+  .brand .eyebrow{
+    font-family:'Inter',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.16em;
+    font-size:0.68rem;
+    color:var(--accent);
+    font-weight:600;
+    display:block;
+    margin-bottom:2px;
+  }
+  .count-pill{
+    font-family:'Inter',sans-serif;
+    font-size:0.8rem;
+    color:var(--ink-soft);
+    border:1px solid var(--border);
+    background:var(--surface);
+    padding:6px 14px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .count-stack{display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
+  .makeable-pill{
+    font-family:'Inter',sans-serif;
+    font-size:0.76rem;
+    font-weight:600;
+    color:var(--herb);
+    background:var(--herb-soft);
+    padding:5px 12px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+
+  .twist-divider{
+    width:100%;
+    height:14px;
+    margin:20px 0 28px;
+    background-repeat:repeat-x;
+    background-position:left center;
+    background-size:34px 14px;
+    opacity:0.55;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='14' viewBox='0 0 34 14'><path d='M1 7 C 6 1, 11 13, 17 7 S 28 1, 33 7' fill='none' stroke='%23A6402C' stroke-width='1.4' stroke-linecap='round'/></svg>");
+  }
+
+  /* ---------- Import bar ---------- */
+  .import-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:8px 14px;
+    margin-bottom:20px;
+  }
+  .import-bar .hint{font-size:0.8rem; color:var(--ink-soft); flex:1 1 160px;}
+  #excelFileInput{display:none;}
+
+  .info-icon-wrap{position:relative;}
+  .info-icon-wrap .icon-btn{
+    width:26px; height:26px; border-radius:50%;
+    font-family:'Fraunces',serif; font-style:italic; font-weight:700; font-size:0.85rem;
+  }
+  .info-popover{
+    position:absolute; top:calc(100% + 8px); left:0; z-index:30;
+    width:280px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; box-shadow:0 8px 24px var(--shadow); padding:12px 14px;
+    font-size:0.8rem; color:var(--ink-soft); line-height:1.5;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .toolbar-row{display:grid; gap:10px;}
+  .row-search{grid-template-columns:4fr 1fr;}
+  .row-3col{grid-template-columns:repeat(3, 1fr);}
+  .row-2col{grid-template-columns:repeat(2, 1fr);}
+  .list-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; position:relative;}
+  .toolbar input[type="text"],
+  .toolbar select{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:0.87rem;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--ink);
+    border-radius:8px;
+    padding:9px 11px;
+  }
+  .toolbar select{cursor:pointer;}
+
+  .icon-btn{
+    width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+    font-size:1rem; border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .icon-btn:hover{background:var(--paper-alt); color:var(--ink);}
+  .sort-panel{right:0; left:auto; width:200px; flex-direction:column; gap:2px; padding:8px;}
+  .sort-panel:not([hidden]){display:flex;}
+  .sort-option{
+    text-align:left; background:transparent; border:none; border-radius:6px;
+    padding:8px 10px; font-family:'Inter',sans-serif; font-size:0.85rem; color:var(--ink);
+    cursor:pointer;
+  }
+  .sort-option:hover{background:var(--paper-alt);}
+  .sort-option.active{background:var(--accent-soft); color:var(--accent); font-weight:600;}
+  .sort-direction-toggle{
+    display:flex; gap:4px; margin-bottom:6px; padding-bottom:6px;
+    border-bottom:1px solid var(--paper-alt);
+  }
+  .sort-dir-btn{
+    flex:1; text-align:center; background:var(--paper); border:1px solid var(--border);
+    border-radius:6px; padding:6px 8px; font-family:'Inter',sans-serif; font-size:0.78rem;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .sort-dir-btn:hover{background:var(--paper-alt);}
+  .sort-dir-btn.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  .multiselect{position:relative; width:100%;}
+  .multiselect-btn{
+    width:100%;
+    font-family:'Inter',sans-serif; font-size:0.87rem; font-weight:600;
+    border:1px solid var(--border); border-radius:8px; padding:9px 11px;
+    background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .multiselect-btn.has-selection{color:var(--accent); border-color:var(--accent-soft); background:var(--accent-soft);}
+  .multiselect-panel{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:20;
+    width:260px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; box-shadow:0 8px 24px var(--shadow); padding:12px;
+  }
+  .multiselect-panel input[type="text"]{
+    width:100%; margin-bottom:8px; font-size:0.85rem;
+    border:1px solid var(--border); border-radius:7px; padding:7px 9px;
+    background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif;
+  }
+  .multiselect-list{max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;}
+  .multiselect-list label{
+    display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:400;
+    text-transform:none; letter-spacing:normal; color:var(--ink);
+    padding:5px 4px; border-radius:6px; cursor:pointer;
+  }
+  .multiselect-list label:hover{background:var(--paper-alt);}
+  .multiselect-list input[type=checkbox]{width:auto; flex-shrink:0;}
+  .multiselect-empty{font-size:0.82rem; color:var(--ink-soft); padding:6px 4px;}
+  .multiselect-actions{display:flex; justify-content:flex-end; margin-top:8px; padding-top:8px; border-top:1px solid var(--paper-alt);}
+  .multiselect-actions .btn{font-size:0.78rem; padding:6px 10px;}
+  input:focus-visible, select:focus-visible, textarea:focus-visible,
+  button:focus-visible, summary:focus-visible, input[type=range]:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:0.87rem;
+    border:none;
+    border-radius:8px;
+    padding:10px 18px;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+    white-space:nowrap;
+  }
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-primary:hover{box-shadow:0 4px 14px var(--shadow); transform:translateY(-1px);}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--border);}
+  .btn-ghost:hover{background:var(--paper-alt);}
+  .btn-danger{background:transparent; color:var(--accent); border:1px solid var(--accent-soft);}
+  .btn-danger:hover{background:var(--accent-soft);}
+
+  /* ---------- Form panel ---------- */
+  #formPanel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin-bottom:32px;
+    overflow:hidden;
+    max-height:0;
+    transition:max-height .28s ease;
+  }
+  #formPanel.open{max-height:2400px;}
+  #formInner{padding:28px;}
+  #formPanel h2{font-family:'Fraunces',serif; font-weight:600; font-size:1.3rem; margin:0 0 18px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 16px;}
+  .form-grid .full{grid-column:1/-1;}
+  label{
+    display:block; font-size:0.78rem; font-weight:600; color:var(--ink-soft);
+    text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;
+  }
+  input[type="text"], input[type="number"], select, textarea{
+    width:100%; font-family:'Inter',sans-serif; font-size:0.92rem;
+    border:1px solid var(--border); background:var(--paper); color:var(--ink);
+    border-radius:7px; padding:9px 11px;
+  }
+  textarea{resize:vertical; min-height:70px; font-family:'Inter',sans-serif;}
+  .hint{font-size:0.76rem; color:var(--ink-soft); margin-top:4px;}
+  .form-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:20px;}
+
+  .rating-row{display:flex; align-items:center; gap:12px;}
+
+  .taste-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:10px;
+  }
+  .taste-item{display:flex; flex-direction:column; gap:4px;}
+  .taste-item .taste-label{font-size:0.78rem; color:var(--ink-soft); font-weight:500;}
+  .taste-item select{width:100%;}
+
+  .taste-filter-rows{display:flex; flex-direction:column; gap:8px;}
+  .taste-filter-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .taste-filter-row span{font-size:0.85rem; color:var(--ink);}
+  .taste-filter-row select{
+    font-family:'Inter',sans-serif; font-size:0.82rem;
+    border:1px solid var(--border); border-radius:6px; padding:5px 7px;
+    background:var(--paper); color:var(--ink); cursor:pointer;
+  }
+  .rating-row input[type=range]{flex:1; accent-color:var(--accent);}
+  #f-rating-label{
+    font-family:'Fraunces',serif; font-weight:600; font-size:1rem;
+    min-width:52px; text-align:right; color:var(--accent);
+  }
+  .rating-row label.checkbox-label{
+    display:flex; align-items:center; gap:6px; font-size:0.78rem;
+    font-weight:500; text-transform:none; letter-spacing:normal; color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .rating-row input[type=checkbox]{width:auto;}
+
+  /* ---------- Recipe list ---------- */
+  .list{display:flex; flex-direction:column; gap:12px;}
+  details.recipe{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;}
+  details.recipe > summary{
+    list-style:none; cursor:pointer; padding:16px 18px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  details.recipe > summary::-webkit-details-marker{display:none;}
+  .summary-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap; width:100%;}
+  .ing-preview{
+    font-family:'Inter',sans-serif; font-size:0.8rem; color:var(--ink-soft);
+    padding-left:40px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .glass-icon{flex-shrink:0; color:var(--ink-soft);}
+  .r-name{font-family:'Fraunces',serif; font-weight:600; font-size:1.1rem; margin-right:auto; color:var(--ink);}
+  .tag{font-size:0.7rem; font-weight:600; letter-spacing:0.03em; padding:4px 10px; border-radius:999px; white-space:nowrap;}
+  .tag-cat{background:var(--herb-soft); color:var(--herb);}
+  .tag-spirit{background:var(--accent-soft); color:var(--accent);}
+  .tag-method{background:var(--paper-alt); color:var(--ink-soft);}
+  .tag-diff-Easy{background:#E4E9D8; color:#5C6B3E;}
+  .tag-diff-Medium{background:#F3E8CE; color:#8A6A1E;}
+  .tag-diff-Hard{background:#F0DCCF; color:#A6402C;}
+  .tag-makeable-yes{background:var(--herb-soft); color:var(--herb);}
+  .tag-makeable-no{background:var(--paper-alt); color:var(--ink-soft);}
+  .tag-price{background:var(--paper-alt); color:var(--ink); font-weight:700;}
+  .rating-badge{
+    font-size:0.78rem; font-weight:700; color:#fff; background:var(--accent);
+    padding:4px 9px; border-radius:6px; white-space:nowrap;
+  }
+  .rating-badge.rating-none{background:transparent; color:var(--ink-soft); border:1px solid var(--border);}
+  .arrow{margin-left:2px; transition:transform .2s ease; color:var(--ink-soft);}
+  details[open] .arrow{transform:rotate(90deg);}
+
+  .recipe-body{
+    padding:0 20px 22px 58px; border-top:1px solid var(--paper-alt);
+    display:grid; grid-template-columns:1.1fr 1fr; gap:24px;
+  }
+  .recipe-body h4{
+    font-family:'Inter',sans-serif; text-transform:uppercase; letter-spacing:0.08em;
+    font-size:0.72rem; color:var(--accent); margin:16px 0 8px;
+  }
+  .recipe-body ul{margin:0; padding-left:18px;}
+  .recipe-body ol{margin:0; padding-left:18px;}
+  .recipe-body li{margin-bottom:4px; font-size:0.92rem;}
+  .recipe-meta-line{font-size:0.88rem; color:var(--ink-soft); margin:2px 0; white-space:pre-line;}
+  .row-actions{grid-column:1/-1; display:flex; gap:8px; justify-content:flex-end; margin-top:4px;}
+
+  .empty-state{
+    text-align:center; padding:60px 20px; border:1px dashed var(--border);
+    border-radius:var(--radius); color:var(--ink-soft);
+  }
+  .empty-state h3{font-family:'Fraunces',serif; color:var(--ink); margin-bottom:6px;}
+
+  .load-more-wrap{display:flex; justify-content:center; margin-top:20px;}
+
+  /* ---------- View navigation ---------- */
+  .view-nav{display:flex; gap:6px; margin-bottom:20px;}
+  .view-nav-btn{
+    font-family:'Fraunces',serif; font-weight:600; font-size:0.95rem;
+    background:transparent; border:none; border-bottom:2px solid transparent;
+    color:var(--ink-soft); padding:8px 4px; cursor:pointer;
+  }
+  .view-nav-btn.active{color:var(--accent); border-bottom-color:var(--accent);}
+  .view-nav-btn:hover{color:var(--ink);}
+
+  /* ---------- Stock (voorraad) view ---------- */
+  .stock-grid{
+    display:flex; flex-direction:column;
+    gap:6px;
+  }
+  .stock-item{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    padding:10px 14px; font-size:0.9rem;
+  }
+  .stock-item:hover{border-color:var(--accent-soft);}
+  .stock-item.in-stock{background:var(--herb-soft); border-color:var(--herb);}
+  .stock-item input[type=checkbox]{width:auto; flex-shrink:0; cursor:pointer;}
+  .stock-item .stock-name{
+    flex:1 1 100px; min-width:80px; font-weight:600; color:var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .stock-item input[type=text], .stock-item input[type=number]{
+    font-family:'Inter',sans-serif; font-size:0.85rem;
+    border:1px solid var(--border); border-radius:6px; padding:6px 9px;
+    background:var(--paper); color:var(--ink);
+  }
+  .stock-fields{
+    display:flex; align-items:center; gap:8px; flex-wrap:nowrap;
+    flex:0 1 auto; margin-left:auto; max-width:100%; min-width:0;
+  }
+  .stock-item .stock-merk{width:110px; flex:0 1 110px; min-width:60px;}
+  .stock-item .stock-price{width:70px; flex:0 1 70px; min-width:50px;}
+  .stock-item select.stock-unit{
+    font-family:'Inter',sans-serif; font-size:0.82rem;
+    width:92px; flex:0 0 92px;
+    border:1px solid var(--border); border-radius:6px; padding:6px 4px;
+    background:var(--paper); color:var(--ink); cursor:pointer;
+  }
+
+  @media (max-width:640px){
+    .recipe-body{grid-template-columns:1fr; padding-left:20px;}
+    .brand h1{font-size:1.9rem;}
+    .form-grid{grid-template-columns:1fr;}
+    .stock-item{flex-direction:column; align-items:stretch;}
+    .stock-item .stock-name{white-space:normal;}
+    .stock-fields{margin-left:0; flex-wrap:wrap;}
+    .stock-item .stock-merk{width:auto; flex:1 1 120px;}
+    .stock-item .stock-price{width:auto; flex:1 1 80px;}
+    .row-search{grid-template-columns:1fr;}
+    .row-3col{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <path d="M8 8 L32 8 L20 22 L20 34" stroke="#A6402C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M14 34 L26 34" stroke="#A6402C" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="24" cy="12" r="1.6" fill="#6B7A4F"/>
+      </svg>
+      <div>
+        <span class="eyebrow">Recipes &amp; techniques</span>
+        <h1>The Cocktail Fountain</h1>
+      </div>
+    </div>
+    <div class="count-stack">
+      <span class="count-pill" id="countPill">0 recipes</span>
+      <span class="makeable-pill" id="makeablePill">0 makeable with your stock</span>
+    </div>
+  </header>
+
+  <div class="twist-divider"></div>
+
+  <div class="view-nav">
+    <button type="button" class="view-nav-btn active" id="navRecipes">Recipes</button>
+    <button type="button" class="view-nav-btn" id="navStock">Stock</button>
+  </div>
+
+  <div id="recipesView">
+
+  <div class="import-bar">
+    <button class="btn btn-primary" id="importBtn">↻ Refresh from Excel</button>
+    <input type="file" id="excelFileInput" accept=".xlsx,.xls">
+    <div class="info-icon-wrap" id="importInfoWrap">
+      <button type="button" class="icon-btn" id="importInfoBtn" title="More info" aria-label="More info">i</button>
+      <div class="info-popover" id="importInfoPopover" hidden>
+        Select your "Database" file (e.g. downloaded/synced from OneDrive). New recipes are added, previously imported recipes are updated — recipes you've manually added or edited yourself are left untouched. Does the file have a "Standaarden Uitgebreid" sheet (or "Standaarden" with the same columns: Ingrediënt, Merk, Prijs/L, Prijs/mL, ABV, Volume/Eenheid)? Then brand/price per ingredient is also brought into the Stock page. Everything stays local in your browser.
+      </div>
+    </div>
+    <span class="hint" id="lastSyncHint"></span>
+    <button class="btn btn-danger" id="clearAllBtn">Delete all recipes</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-row row-search">
+      <input type="text" id="searchInput" placeholder="Search…">
+      <select id="searchScope">
+        <option value="both">Name + ingredient</option>
+        <option value="name">Search in: name only</option>
+        <option value="ingredient">Search in: ingredient only</option>
+      </select>
+    </div>
+    <select id="filterCategory" style="display:none;"><option value="">Categories</option></select>
+    <div class="toolbar-row row-3col">
+      <select id="filterMethod"><option value="">Methods</option></select>
+      <select id="filterGlass"><option value="">Glasses</option></select>
+      <select id="filterMakeable">
+        <option value="">Makeable</option>
+        <option value="yes">Can make with my stock</option>
+        <option value="no">Can't make (missing something)</option>
+      </select>
+    </div>
+    <div class="toolbar-row row-2col">
+      <div class="multiselect" id="ingredientFilterWrap">
+        <button type="button" class="btn btn-ghost multiselect-btn" id="ingredientFilterBtn">Ingredients</button>
+        <div class="multiselect-panel" id="ingredientFilterPanel" hidden>
+          <input type="text" id="ingredientFilterSearch" placeholder="Search ingredient…">
+          <div class="multiselect-list" id="ingredientFilterList"></div>
+          <div class="multiselect-actions">
+            <button type="button" class="btn btn-ghost" id="ingredientFilterClear">Clear selection</button>
+          </div>
+        </div>
+      </div>
+      <div class="multiselect" id="tasteFilterWrap">
+        <button type="button" class="btn btn-ghost multiselect-btn" id="tasteFilterBtn">Taste</button>
+        <div class="multiselect-panel" id="tasteFilterPanel" hidden>
+          <div class="taste-filter-rows">
+            <div class="taste-filter-row"><span>Sweet</span><select data-axis="sweet"><option value="">Any</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+            <div class="taste-filter-row"><span>Sour</span><select data-axis="sour"><option value="">Any</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+            <div class="taste-filter-row"><span>Bitter</span><select data-axis="bitter"><option value="">Any</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+            <div class="taste-filter-row"><span>Strong</span><select data-axis="strong"><option value="">Any</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+            <div class="taste-filter-row"><span>Refreshing</span><select data-axis="fresh"><option value="">Any</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+          </div>
+          <div class="multiselect-actions">
+            <button type="button" class="btn btn-ghost" id="tasteFilterClear">Clear selection</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="list-header">
+    <div class="multiselect" id="sortFilterWrap">
+      <button type="button" class="icon-btn" id="sortFilterBtn" title="Sort">⇅</button>
+      <div class="multiselect-panel sort-panel" id="sortFilterPanel" hidden>
+        <div class="sort-direction-toggle">
+          <button type="button" class="sort-dir-btn" data-dir="asc">↑ Low–High</button>
+          <button type="button" class="sort-dir-btn" data-dir="desc">↓ High–Low</button>
+        </div>
+        <button type="button" class="sort-option" data-sort="name">Name (A-Z)</button>
+        <button type="button" class="sort-option" data-sort="difficulty">Difficulty</button>
+        <button type="button" class="sort-option" data-sort="glass">Glass type</button>
+        <button type="button" class="sort-option" data-sort="spirit">Base spirit</button>
+        <button type="button" class="sort-option" data-sort="rating">Rating</button>
+        <button type="button" class="sort-option" data-sort="price">Price</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="addBtn">+ New recipe</button>
+  </div>
+
+
+  <div id="formPanel">
+    <div id="formInner">
+      <h2 id="formTitle">Nieuw recept</h2>
+      <form id="recipeForm">
+        <input type="hidden" id="recipeId">
+        <div class="form-grid">
+          <div class="full">
+            <label for="f-name">Name</label>
+            <input type="text" id="f-name" required placeholder="e.g. Whiskey Sour">
+          </div>
+
+          <div>
+            <label for="f-category">Category (optional)</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="f-category" list="dlCategory" placeholder="e.g. Classic, Tiki, Sour…" style="flex:1;">
+              <button type="button" class="btn btn-ghost" id="suggestCategoryBtn" style="white-space:nowrap;">💡 Suggest</button>
+            </div>
+            <datalist id="dlCategory"></datalist>
+            <p class="hint" id="categorySuggestionHint"></p>
+          </div>
+
+          <div>
+            <label for="f-spirit">Base spirit</label>
+            <input type="text" id="f-spirit" list="dlSpirit" placeholder="e.g. Gin, Rum, Whisk(e)y…">
+            <datalist id="dlSpirit"></datalist>
+          </div>
+
+          <div>
+            <label for="f-glass">Glass</label>
+            <input type="text" id="f-glass" list="dlGlass" placeholder="e.g. Coupe, Highball, Martini…">
+            <datalist id="dlGlass"></datalist>
+          </div>
+
+          <div>
+            <label for="f-method">Method</label>
+            <input type="text" id="f-method" list="dlMethod" placeholder="e.g. Shake, Stir, Build…">
+            <datalist id="dlMethod"></datalist>
+          </div>
+
+          <div>
+            <label for="f-difficulty">Difficulty</label>
+            <select id="f-difficulty">
+              <option>Easy</option>
+              <option>Medium</option>
+              <option>Hard</option>
+            </select>
+          </div>
+
+          <div class="full">
+            <label for="f-ingredients">Ingredients (one per line, incl. quantity)</label>
+            <textarea id="f-ingredients" placeholder="45 ml bourbon&#10;25 ml lemon juice&#10;15 ml sugar syrup" required></textarea>
+          </div>
+
+          <div class="full">
+            <label for="f-method-steps">Instructions (one step per line)</label>
+            <textarea id="f-method-steps" placeholder="Shake all ingredients with ice&#10;Double strain into a chilled glass" required></textarea>
+          </div>
+
+          <div>
+            <label for="f-garnish">Garnish</label>
+            <input type="text" id="f-garnish" placeholder="e.g. orange slice">
+          </div>
+
+          <div>
+            <label>Rating</label>
+            <div class="rating-row">
+              <input type="range" id="f-rating" min="0" max="10" step="0.5" value="0">
+              <span id="f-rating-label">–</span>
+            </div>
+            <label class="checkbox-label" style="margin-top:6px;">
+              <input type="checkbox" id="f-rating-untasted" checked> Not tasted yet
+            </label>
+          </div>
+
+          <div class="full">
+            <label>Taste profile (optional)</label>
+            <div class="taste-grid">
+              <div class="taste-item">
+                <span class="taste-label">Sweet</span>
+                <select id="f-taste-sweet"><option value="">–</option><option>Low</option><option>Medium</option><option>High</option></select>
+              </div>
+              <div class="taste-item">
+                <span class="taste-label">Sour</span>
+                <select id="f-taste-sour"><option value="">–</option><option>Low</option><option>Medium</option><option>High</option></select>
+              </div>
+              <div class="taste-item">
+                <span class="taste-label">Bitter</span>
+                <select id="f-taste-bitter"><option value="">–</option><option>Low</option><option>Medium</option><option>High</option></select>
+              </div>
+              <div class="taste-item">
+                <span class="taste-label">Strong</span>
+                <select id="f-taste-strong"><option value="">–</option><option>Low</option><option>Medium</option><option>High</option></select>
+              </div>
+              <div class="taste-item">
+                <span class="taste-label">Refreshing</span>
+                <select id="f-taste-fresh"><option value="">–</option><option>Low</option><option>Medium</option><option>High</option></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="full">
+            <label for="f-notes">Notes (source, cost, special notes…)</label>
+            <textarea id="f-notes" placeholder="Your own tips, variations, origin…"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save recipe</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button class="btn btn-ghost" id="loadMoreBtn">Show more</button>
+  </div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <h3>No recipes found yet</h3>
+    <p>Adjust your search or filters, import your Excel file, or add a new recipe.</p>
+  </div>
+
+  </div><!-- /recipesView -->
+
+  <div id="stockView" hidden>
+    <div class="import-bar">
+      <span class="hint">Indicate per ingredient whether you have it in stock, which brand, and the price per mL or per piece. This determines which recipes are "makeable" and the estimated price per cocktail. Everything is remembered locally in your browser.</span>
+      <span class="count-pill" id="stockCountPill">0 / 0 in stock</span>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="stockSearch" placeholder="Search ingredient…">
+      <button type="button" class="btn btn-ghost" id="stockCheckAllBtn">Check all (filtered)</button>
+      <button type="button" class="btn btn-ghost" id="stockUncheckAllBtn">Uncheck all (filtered)</button>
+      <button type="button" class="btn btn-danger" id="stockClearBtn">Clear entire stock</button>
+    </div>
+    <div class="stock-grid" id="stockGrid"></div>
+    <div class="empty-state" id="stockEmptyState" style="display:none;">
+      <h3>No ingredients found</h3>
+      <p>Adjust your search, or add recipes first so there are ingredients to manage.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'cocktailboek_recepten_v2';
+  const LAST_SYNC_KEY = 'cocktailboek_laatste_sync_v2';
+  const STOCK_KEY = 'cocktailboek_voorraad_v1';
+  const PAGE_SIZE = 150;
+
+  /* ---------- Glass icons ---------- */
+  const ICON_COUPE = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 6 C5 12 12 14 13 14 C14 14 21 12 21 6" stroke-linecap="round"/><line x1="13" y1="14" x2="13" y2="21"/><line x1="8" y1="21" x2="18" y2="21"/><ellipse cx="13" cy="6" rx="8" ry="2.2"/></svg>';
+  const ICON_ROCKS = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="8" width="12" height="13" rx="1"/><line x1="7" y1="13" x2="19" y2="13"/></svg>';
+  const ICON_COLLINS = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="4" width="8" height="18" rx="1"/></svg>';
+  const ICON_MARTINI = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 5 L13 14 L21 5 Z"/><line x1="13" y1="14" x2="13" y2="21"/><line x1="8" y1="21" x2="18" y2="21"/></svg>';
+  const ICON_MULE = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="6" width="12" height="15" rx="2"/><path d="M18 9 C22 9 22 16 18 16"/></svg>';
+  const ICON_HURRICANE = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 4 C9 10 7 12 9 15 C11 18 9 19 9 21 M17 4 C17 10 19 12 17 15 C15 18 17 19 17 21" stroke-linecap="round"/></svg>';
+  const ICON_WINE = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="13" cy="8" rx="7" ry="5"/><path d="M6 8 C6 13 20 13 20 8"/><line x1="13" y1="13" x2="13" y2="21"/><line x1="8" y1="21" x2="18" y2="21"/></svg>';
+  const ICON_SHOT = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6 L17 6 L15.5 20 L10.5 20 Z"/></svg>';
+  const ICON_FLUTE = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 4 C11 12 15 12 15 4" /><line x1="13" y1="12" x2="13" y2="21"/><line x1="8" y1="21" x2="18" y2="21"/></svg>';
+  const ICON_MUG = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="7" width="12" height="13" rx="2"/><path d="M17 10 C21 10 21 16 17 16"/></svg>';
+  const ICON_JULEP = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 6 L18 6 L17 20 L9 20 Z"/><line x1="8" y1="10" x2="18" y2="10"/></svg>';
+  const ICON_SNIFTER = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 9 C5 15 9 18 13 18 C17 18 21 15 21 9" /><ellipse cx="13" cy="9" rx="8" ry="4"/><line x1="13" y1="18" x2="13" y2="21"/><line x1="9" y1="21" x2="17" y2="21"/></svg>';
+  const ICON_PILSNER = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 4 L18 4 L16 21 L10 21 Z"/></svg>';
+  const ICON_TIKI = '<svg class="glass-icon" width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 5 C7 8 7 10 8 12 C6 14 6 17 9 19 L17 19 C20 17 20 14 18 12 C19 10 19 8 17 5 Z"/></svg>';
+  const ICON_DEFAULT = ICON_ROCKS;
+
+  const GLASS_ICON_MAP = {
+    'coupe': ICON_COUPE,
+    'nick & nora': ICON_COUPE,
+    'rocks / old fashioned': ICON_ROCKS,
+    'old-fashioned': ICON_ROCKS,
+    'double old-fashioned': ICON_ROCKS,
+    'highball': ICON_COLLINS,
+    'collins': ICON_COLLINS,
+    '16-oz glass': ICON_COLLINS,
+    'pint': ICON_COLLINS,
+    'martini / cocktail': ICON_MARTINI,
+    'martini': ICON_MARTINI,
+    'koperen mok (mule)': ICON_MULE,
+    'copper mug (mule)': ICON_MULE,
+    'copper mug (mule)': ICON_MULE,
+    'copper mug (mule)': ICON_MULE,
+    'copper mug (mule)': ICON_MULE,
+    'copper mug (mule)': ICON_MULE,
+    'copper mug (mule)': ICON_MULE,
+    'hurricane': ICON_HURRICANE,
+    'sling': ICON_HURRICANE,
+    'wijnglas': ICON_WINE,
+    'wine': ICON_WINE,
+    'shotglas': ICON_SHOT,
+    'shot': ICON_SHOT,
+    'flûte': ICON_FLUTE,
+    'champagne': ICON_FLUTE,
+    'coffee': ICON_MUG,
+    'toddy': ICON_MUG,
+    'julep': ICON_JULEP,
+    'snifter': ICON_SNIFTER,
+    'pilsner': ICON_PILSNER,
+    'pineapple': ICON_TIKI,
+    'coconut shell': ICON_TIKI
+  };
+  function getGlassIcon(name){
+    const key = (name || '').toLowerCase().trim();
+    return GLASS_ICON_MAP[key] || ICON_DEFAULT;
+  }
+
+  const DIFF_ORDER = {'Easy':0,'Medium':1,'Hard':2};
+  const TASTE_AXES = ['sweet','sour','bitter','strong','fresh'];
+  const TASTE_LABELS = {sweet:'Sweet', sour:'Sour', bitter:'Bitter', strong:'Strong', fresh:'Refreshing'};
+
+  function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function seedData(){
+    return [
+      { id: uid(), name:'Old Fashioned', category:'Classic', spirit:'Whiskey / Bourbon', method:'Stir',
+        glass:'Rocks / Old Fashioned', difficulty:'Easy',
+        ingredients:['60 ml bourbon or rye whiskey','2 dashes Angostura bitters','1 sugar cube','a dash of water'],
+        steps:['Dissolve the sugar with the bitters and a dash of water in the glass','Add whiskey and plenty of ice','Stir gently until well chilled'],
+        garnish:'Orange peel', rating:9, notes:'Express the peel over the glass to release the citrus oils.', source:'seed' },
+      { id: uid(), name:'Daiquiri', category:'Sour', spirit:'Rum', method:'Shake',
+        glass:'Coupe', difficulty:'Easy',
+        ingredients:['60 ml white rum','25 ml fresh lime juice','20 ml sugar syrup'],
+        steps:['Shake all ingredients hard with ice','Double strain into a chilled coupe'],
+        garnish:'Lime wheel', rating:9, notes:'', source:'seed' },
+      { id: uid(), name:'Negroni', category:'Stirred / Spirit-forward', spirit:'Gin', method:'Stir',
+        glass:'Rocks / Old Fashioned', difficulty:'Easy',
+        ingredients:['30 ml gin','30 ml Campari','30 ml sweet vermouth'],
+        steps:['Stir all ingredients with ice','Strain over fresh ice into a rocks glass'],
+        garnish:'Orange peel', rating:8, notes:'', source:'seed' },
+      { id: uid(), name:'Margarita', category:'Sour', spirit:'Tequila / Mezcal', method:'Shake',
+        glass:'Coupe', difficulty:'Medium',
+        ingredients:['50 ml blanco tequila','25 ml triple sec','20 ml lime juice'],
+        steps:['Shake with ice','Strain into a glass with a salt rim (optional)'],
+        garnish:'Lime wheel, salt rim', rating:8, notes:'', source:'seed' },
+      { id: uid(), name:'Whiskey Sour', category:'Sour', spirit:'Whiskey / Bourbon', method:'Shake',
+        glass:'Rocks / Old Fashioned', difficulty:'Medium',
+        ingredients:['60 ml bourbon','25 ml lemon juice','20 ml sugar syrup','1 egg white (optional)'],
+        steps:['Dry shake without ice for foam (if using egg white)','Shake again with ice','Strain over fresh ice'],
+        garnish:'Dashes of Angostura bitters', rating:7.5, notes:'Egg white gives a creamy foam layer.', source:'seed' },
+      { id: uid(), name:'Moscow Mule', category:'Highball', spirit:'Vodka', method:'Build-In-Glass',
+        glass:'Copper Mug (Mule)', difficulty:'Easy',
+        ingredients:['50 ml vodka','15 ml lime juice','120 ml ginger beer'],
+        steps:['Vodka and lime juice in the mug with ice','Top up with ginger beer','Stir briefly'],
+        garnish:'Mint sprig, lime wheel', rating:null, notes:'', source:'seed' }
+    ];
+  }
+
+  // Canonical casing for bereidingswijze — de Excel-bron bevat dezelfde methode
+  // met wisselende hoofdlettergebruik (bv. "Whip shake" vs "Whip Shake"), dit
+  // groepeert ze naar één consistente weergave.
+  const METHOD_CANON = {
+    'shake': 'Shake',
+    'stir': 'Stir',
+    'build-in-glass': 'Build-In-Glass',
+    'whip shake': 'Whip Shake',
+    'blend': 'Blend',
+    'heat': 'Heat',
+    'mix': 'Mix',
+    'unknown': 'Unknown'
+  };
+  function normalizeMethod(raw){
+    if(!raw) return raw;
+    const trimmed = String(raw).trim();
+    return METHOD_CANON[trimmed.toLowerCase()] || trimmed;
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw){
+        const seeded = seedData();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      const list = JSON.parse(raw);
+      // one-time cleanup: merge method casing variants, and translate old Dutch
+      // values (from before the app's English translation) to their English equivalents
+      const NL_TO_EN = {
+        difficulty: {'Makkelijk':'Easy', 'Gemiddeld':'Medium', 'Moeilijk':'Hard'},
+        method: {'Onbekend':'Unknown'},
+        glass: {'Onbekend':'Unknown', 'Koperen mok (Mule)':'Copper Mug (Mule)', 'Wijnglas':'Wine', 'Shotglas':'Shot'},
+        spirit: {'Alcoholvrij':'Non-alcoholic', 'Wodka':'Vodka'}
+      };
+      let changed = false;
+      list.forEach(r=>{
+        const norm = normalizeMethod(r.method);
+        if(norm !== r.method){ r.method = norm; changed = true; }
+        Object.keys(NL_TO_EN).forEach(field=>{
+          const map = NL_TO_EN[field];
+          if(r[field] && map[r[field]]){ r[field] = map[r[field]]; changed = true; }
+        });
+      });
+      if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      return list;
+    }catch(e){
+      console.error('Could not load recipes, starting with sample data.', e);
+      return seedData();
+    }
+  }
+  function save(list){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }catch(e){
+      alert('Saving failed. Your browser storage might be full.');
+    }
+  }
+
+  let recipes = load();
+  let currentPageSize = PAGE_SIZE;
+
+  const listEl = document.getElementById('list');
+  const emptyState = document.getElementById('emptyState');
+  const countPill = document.getElementById('countPill');
+  const makeablePill = document.getElementById('makeablePill');
+  const searchInput = document.getElementById('searchInput');
+  const searchScope = document.getElementById('searchScope');
+  const filterCategory = document.getElementById('filterCategory');
+  const filterMethod = document.getElementById('filterMethod');
+  const filterGlass = document.getElementById('filterGlass');
+  const filterMakeable = document.getElementById('filterMakeable');
+  const ingredientFilterWrap = document.getElementById('ingredientFilterWrap');
+  const ingredientFilterBtn = document.getElementById('ingredientFilterBtn');
+  const ingredientFilterPanel = document.getElementById('ingredientFilterPanel');
+  const ingredientFilterSearch = document.getElementById('ingredientFilterSearch');
+  const ingredientFilterList = document.getElementById('ingredientFilterList');
+  const ingredientFilterClear = document.getElementById('ingredientFilterClear');
+  let selectedIngredients = new Set();
+  let selectedTaste = {};
+  let currentSortMode = 'name';
+  let currentSortDirection = 'asc';
+  const sortFilterBtn = document.getElementById('sortFilterBtn');
+  const sortFilterPanel = document.getElementById('sortFilterPanel');
+  const sortFilterWrap = document.getElementById('sortFilterWrap');
+  const formPanel = document.getElementById('formPanel');
+  const formTitle = document.getElementById('formTitle');
+  const recipeForm = document.getElementById('recipeForm');
+  const addBtn = document.getElementById('addBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const loadMoreWrap = document.getElementById('loadMoreWrap');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const importBtn = document.getElementById('importBtn');
+  const excelFileInput = document.getElementById('excelFileInput');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const lastSyncHint = document.getElementById('lastSyncHint');
+
+  function updateLastSyncHint(){
+    const iso = localStorage.getItem(LAST_SYNC_KEY);
+    if(!iso){ lastSyncHint.textContent = 'Not yet refreshed from Excel.'; return; }
+    const d = new Date(iso);
+    const datum = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+    const tijd = d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    lastSyncHint.textContent = `Last refreshed: ${datum} at ${tijd}.`;
+  }
+
+  const ratingSlider = document.getElementById('f-rating');
+  const ratingLabel = document.getElementById('f-rating-label');
+  const ratingUntasted = document.getElementById('f-rating-untasted');
+
+  function escapeHTML(str){
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function formatRating(v){
+    if(v == null) return null;
+    const n = Number(v);
+    return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10);
+  }
+
+  function ratingBadgeHTML(r){
+    const f = formatRating(r);
+    if(f == null) return '<span class="rating-badge rating-none">– /10</span>';
+    return `<span class="rating-badge">${f}/10</span>`;
+  }
+
+  /* ---------- Ingredient name parsing (strips leading amount/unit from a line) ---------- */
+  const INGREDIENT_LEAD_RE = /^\s*[\d.,\/]+(?:\s*[-–]\s*[\d.,\/]+)?\s*(ml|cl|l|oz|fl\.?\s?oz|tsp|tbsp|cup|dash(?:es)?|drops?|pinch(?:es)?|klontjes?|klontje|scheutjes?|scheutje|stuks?|stuk|blaadjes?|blaadje|takjes?|takje)?\s*/i;
+  function parseIngredientName(line){
+    const stripped = line.replace(INGREDIENT_LEAD_RE, '').trim();
+    return stripped || line.trim();
+  }
+  function ingredientNamesOf(r){
+    return r.ingredients.map(parseIngredientName);
+  }
+
+  function parseIngredientAmount(line){
+    const m = line.match(/^\s*([\d]+(?:[.,]\d+)?)/);
+    if(!m) return null;
+    return parseFloat(m[1].replace(',', '.'));
+  }
+
+  function sortedIngredientLines(r){
+    return [...r.ingredients].sort((a,b)=>{
+      const aAmt = parseIngredientAmount(a);
+      const bAmt = parseIngredientAmount(b);
+      if(aAmt==null && bAmt==null) return 0;
+      if(aAmt==null) return 1;   // regels zonder herkenbare hoeveelheid onderaan
+      if(bAmt==null) return -1;
+      return bAmt - aAmt;        // aflopend: grootste hoeveelheid eerst
+    });
+  }
+
+  function mainIngredientTag(r){
+    if(!r.ingredients || r.ingredients.length === 0) return null;
+    const top = sortedIngredientLines(r)[0];
+    if(parseIngredientAmount(top) == null) return null; // geen enkele regel had een herkenbare hoeveelheid
+    const name = parseIngredientName(top);
+    return name.split(/\s*-\s*/)[0].trim(); // "Gin - London Dry Gin" -> "Gin"
+  }
+
+  /* ---------- Dynamic filter/datalist population ---------- */
+  function distinctValues(field){
+    const set = new Set();
+    recipes.forEach(r=>{ if(r[field]) set.add(r[field]); });
+    return [...set].sort((a,b)=>a.localeCompare(b,'nl'));
+  }
+
+  function distinctIngredientNames(){
+    // groepeer op kleine letters, zodat bv. "Triple Sec" en "triple sec" niet
+    // als twee losse ingrediënten in de lijst verschijnen; de meest voorkomende
+    // schrijfwijze wordt als weergavenaam gebruikt (zelfde aanpak als bereidingswijze)
+    const variantCounts = new Map(); // lowercase key -> Map(variant -> count)
+    recipes.forEach(r=>{
+      ingredientNamesOf(r).forEach(n=>{
+        if(!n) return;
+        const key = n.toLowerCase();
+        if(!variantCounts.has(key)) variantCounts.set(key, new Map());
+        const variants = variantCounts.get(key);
+        variants.set(n, (variants.get(n) || 0) + 1);
+      });
+    });
+    const canonical = [];
+    variantCounts.forEach(variants=>{
+      let best = null, bestCount = -1;
+      variants.forEach((count, variant)=>{
+        if(count > bestCount){ bestCount = count; best = variant; }
+      });
+      canonical.push(best);
+    });
+    return canonical.sort((a,b)=>a.localeCompare(b,'nl'));
+  }
+
+  /* ---------- Voorraad (stock) ---------- */
+  // Elke voorraad-entry: { inStock: bool, merk: string, price: number|null, priceUnit: 'ml'|'stuk' }
+  function loadStock(){
+    try{
+      const raw = localStorage.getItem(STOCK_KEY);
+      const data = raw ? JSON.parse(raw) : {};
+      // migratie van het oude formaat (key -> true) naar het nieuwe object-formaat
+      let migrated = false;
+      Object.keys(data).forEach(key=>{
+        if(data[key] === true){
+          data[key] = { inStock:true, merk:'', price:null, priceUnit:'ml' };
+          migrated = true;
+        }
+      });
+      if(migrated) localStorage.setItem(STOCK_KEY, JSON.stringify(data));
+      return data;
+    }catch(e){
+      console.error('Could not load stock.', e);
+      return {};
+    }
+  }
+  function saveStock(stock){
+    try{ localStorage.setItem(STOCK_KEY, JSON.stringify(stock)); }
+    catch(e){ alert('Saving stock failed.'); }
+  }
+  let stock = loadStock();
+
+  function getStockEntry(name){
+    const key = name.toLowerCase();
+    return stock[key] || { inStock:false, merk:'', price:null, priceUnit:'ml' };
+  }
+  function isInStock(name){
+    const e = stock[name.toLowerCase()];
+    return !!(e && e.inStock);
+  }
+  function ensureStockEntry(key){
+    if(!stock[key]) stock[key] = { inStock:false, merk:'', price:null, priceUnit:'ml' };
+    return stock[key];
+  }
+
+  const navRecipes = document.getElementById('navRecipes');
+  const navStock = document.getElementById('navStock');
+  const recipesView = document.getElementById('recipesView');
+  const stockView = document.getElementById('stockView');
+  const stockSearch = document.getElementById('stockSearch');
+  const stockGrid = document.getElementById('stockGrid');
+  const stockEmptyState = document.getElementById('stockEmptyState');
+  const stockCountPill = document.getElementById('stockCountPill');
+  const stockCheckAllBtn = document.getElementById('stockCheckAllBtn');
+  const stockUncheckAllBtn = document.getElementById('stockUncheckAllBtn');
+  const stockClearBtn = document.getElementById('stockClearBtn');
+
+  function showRecipesView(){
+    recipesView.hidden = false;
+    stockView.hidden = true;
+    navRecipes.classList.add('active');
+    navStock.classList.remove('active');
+    render();
+  }
+  function showStockView(){
+    recipesView.hidden = true;
+    stockView.hidden = false;
+    navStock.classList.add('active');
+    navRecipes.classList.remove('active');
+    renderStockView();
+  }
+  navRecipes.addEventListener('click', showRecipesView);
+  navStock.addEventListener('click', showStockView);
+
+  function updateStockCountPill(){
+    const allNames = distinctIngredientNames();
+    const inStockTotal = allNames.filter(n=>isInStock(n)).length;
+    stockCountPill.textContent = `${inStockTotal} / ${allNames.length} op voorraad`;
+  }
+
+  function renderStockView(){
+    const allNames = distinctIngredientNames();
+    updateStockCountPill();
+
+    const q = stockSearch.value.trim().toLowerCase();
+    const filtered = q ? allNames.filter(n=>n.toLowerCase().includes(q)) : allNames;
+
+    if(filtered.length === 0){
+      stockGrid.innerHTML = '';
+      stockEmptyState.style.display = 'block';
+      return;
+    }
+    stockEmptyState.style.display = 'none';
+
+    stockGrid.innerHTML = filtered.map(n=>{
+      const key = n.toLowerCase();
+      const entry = getStockEntry(n);
+      return `<div class="stock-item${entry.inStock ? ' in-stock' : ''}" data-key="${escapeHTML(key)}">
+        <input type="checkbox" class="stock-check" ${entry.inStock ? 'checked' : ''}>
+        <span class="stock-name">${escapeHTML(n)}</span>
+        <div class="stock-fields">
+          <input type="text" class="stock-merk" placeholder="Merk" value="${escapeHTML(entry.merk || '')}">
+          <input type="number" step="0.001" min="0" class="stock-price" placeholder="Prijs" value="${entry.price != null ? entry.price : ''}">
+          <select class="stock-unit">
+            <option value="ml" ${entry.priceUnit==='ml' ? 'selected' : ''}>per mL</option>
+            <option value="stuk" ${entry.priceUnit==='stuk' ? 'selected' : ''}>per stuk</option>
+          </select>
+        </div>
+      </div>`;
+    }).join('');
+
+    stockGrid.querySelectorAll('.stock-item').forEach(item=>{
+      const key = item.dataset.key;
+      const cb = item.querySelector('.stock-check');
+      const merkInput = item.querySelector('.stock-merk');
+      const priceInput = item.querySelector('.stock-price');
+      const unitSelect = item.querySelector('.stock-unit');
+
+      cb.addEventListener('change', ()=>{
+        const entry = ensureStockEntry(key);
+        entry.inStock = cb.checked;
+        item.classList.toggle('in-stock', cb.checked);
+        saveStock(stock);
+        updateStockCountPill();
+      });
+      merkInput.addEventListener('change', ()=>{
+        ensureStockEntry(key).merk = merkInput.value.trim();
+        saveStock(stock);
+      });
+      priceInput.addEventListener('change', ()=>{
+        const v = priceInput.value.trim();
+        ensureStockEntry(key).price = v === '' ? null : Number(v);
+        saveStock(stock);
+      });
+      unitSelect.addEventListener('change', ()=>{
+        ensureStockEntry(key).priceUnit = unitSelect.value;
+        saveStock(stock);
+      });
+    });
+  }
+
+  stockSearch.addEventListener('input', renderStockView);
+  stockCheckAllBtn.addEventListener('click', ()=>{
+    const q = stockSearch.value.trim().toLowerCase();
+    const allNames = distinctIngredientNames();
+    const filtered = q ? allNames.filter(n=>n.toLowerCase().includes(q)) : allNames;
+    filtered.forEach(n=>{ ensureStockEntry(n.toLowerCase()).inStock = true; });
+    saveStock(stock);
+    renderStockView();
+  });
+  stockUncheckAllBtn.addEventListener('click', ()=>{
+    const q = stockSearch.value.trim().toLowerCase();
+    const allNames = distinctIngredientNames();
+    const filtered = q ? allNames.filter(n=>n.toLowerCase().includes(q)) : allNames;
+    filtered.forEach(n=>{ ensureStockEntry(n.toLowerCase()).inStock = false; });
+    saveStock(stock);
+    renderStockView();
+  });
+  stockClearBtn.addEventListener('click', ()=>{
+    if(confirm('Are you sure you want to clear your entire stock (incl. brands and prices)?')){
+      stock = {};
+      saveStock(stock);
+      renderStockView();
+    }
+  });
+
+  // De 36 cocktailfamilies/-categorieën van Difford's Guide, plus "Shot" als extra
+  // toegevoegde categorie — altijd als suggestie beschikbaar bij het invullen van
+  // "Categorie", naast categorieën die je zelf gebruikt.
+  // Bron: diffordsguide.com/encyclopedia/1989/cocktails/cocktail-categories/families
+  const COCKTAIL_FAMILIES = [
+    'Blazer','Buck','Cobbler','Colada','Collins','Cooler','Crusta','Cup','Daisy','Egg Nog',
+    'Fix','Fizz','Flip','Frappé','Frozen','Grog','Highball','Julep','Martini',
+    "'Martini'/Neo Martini/Alternatini",'Mull','Nogs','Posset','Pousse café','Punch','Rickey',
+    'Sangaree','Scaffa','Screw','Shot','Shrub','Sling','Smash','Sour','Swizzle','Tea','Toddy'
+  ];
+
+  /* ---------- Category suggestion engine (same matrix as the standalone Excel tool) ---------- */
+  // Fingerprint per family: 1 = defining trait present, 0 = defining trait absent, unset = not relevant.
+  // "Shot" is a user-added category with no fixed Difford's Guide signature, so it's left out here
+  // on purpose — it will simply never come up as a suggestion, only as a manual dropdown option.
+  const FAMILY_MATRIX = {
+    'Blazer': {Sugar:1, Hot:1, StraightUp:1},
+    'Buck': {Citrus:1, Carbonated:1, Sugar:0, Built:1},
+    'Cobbler': {Sugar:1, Fruit:1, Shaken:1, CrushedIce:1},
+    'Colada': {Sugar:1, Fruit:1, Blended:1, CrushedIce:1},
+    'Collins': {Citrus:1, Sugar:1, Carbonated:1, Built:1},
+    'Cooler': {Carbonated:1, Built:1},
+    'Crusta': {Citrus:1, Sugar:1, Bitters:1, Shaken:1},
+    'Cup': {Fruit:1, Built:1},
+    'Daisy': {Citrus:1, Shaken:1},
+    'Egg Nog': {Egg:1, Cream:1, Sugar:1, Shaken:1},
+    'Fix': {Citrus:1, Sugar:1, Shaken:1, CrushedIce:1},
+    'Fizz': {Citrus:1, Sugar:1, Carbonated:1, Shaken:1, StraightUp:1},
+    'Flip': {Egg:1, Sugar:1, Cream:0, Shaken:1},
+    'Frappé': {CrushedIce:1},
+    'Frozen': {Blended:1, CrushedIce:1},
+    'Grog': {Citrus:1, Sugar:1, Shaken:1, RumBased:1},
+    'Highball': {Carbonated:1, Built:1, Citrus:0},
+    'Julep': {Mint:1, Sugar:1, Muddled:1, CrushedIce:1},
+    'Martini': {Vermouth:1, StraightUp:1},
+    "'Martini'/Neo Martini/Alternatini": {Shaken:1, StraightUp:1},
+    'Mull': {FortifiedWine:1, Herbs:1, Hot:1, Stirred:1},
+    'Nogs': {Egg:1, Cream:1, Sugar:1, Shaken:1},
+    'Posset': {Cream:1, FortifiedWine:1, Herbs:1, Sugar:1, Hot:1},
+    'Pousse café': {Layered:1},
+    'Punch': {Citrus:1, Sugar:1, Herbs:1},
+    'Rickey': {Citrus:1, Carbonated:1},
+    'Sangaree': {FortifiedWine:1, Sugar:1},
+    'Scaffa': {Bitters:1, StraightUp:1},
+    'Screw': {Fruit:1, Built:1},
+    'Shrub': {Fruit:1, Sugar:1},
+    'Sling': {Citrus:1, Sugar:1, Carbonated:1, Shaken:1},
+    'Smash': {Mint:1, Sugar:1, Muddled:1},
+    'Sour': {Citrus:1, Shaken:1},
+    'Swizzle': {Citrus:1, Sugar:1, Bitters:1, CrushedIce:1},
+    'Tea': {Citrus:1, Sugar:1, Carbonated:1},
+    'Toddy': {Sugar:1, Hot:1, Stirred:1}
+  };
+
+  const ATTR_KEYWORDS = {
+    Citrus: ['lemon','lime','citrus','grapefruit','yuzu'],
+    Sugar: ['sugar','syrup','honey','agave','grenadine','orgeat','falernum','sweet'],
+    Egg: ['egg'],
+    Cream: ['cream','milk'],
+    Mint: ['mint'],
+    Bitters: ['bitters'],
+    Carbonated: ['soda','tonic','ginger beer','ginger ale','champagne','prosecco','sparkling','cola','cava','club soda'],
+    Vermouth: ['vermouth'],
+    FortifiedWine: ['sherry','port','madeira','marsala','wine'],
+    Fruit: ['juice','orange','pineapple','cranberry','passion fruit','mango','peach','raspberry','strawberry','apple','grape','banana','guava','papaya','pomegranate','watermelon','kiwi','fruit','purée','puree'],
+    Herbs: ['thyme','rosemary','basil','sage','clove','cinnamon','nutmeg','ginger','cardamom','spice','herb','allspice','anise','vanilla']
+  };
+
+  function inferAttributesFromForm(){
+    const ingredientsText = document.getElementById('f-ingredients').value.toLowerCase();
+    const stepsText = document.getElementById('f-method-steps').value.toLowerCase();
+    const methodText = document.getElementById('f-method').value.toLowerCase();
+    const glassText = document.getElementById('f-glass').value.toLowerCase();
+    const spiritText = document.getElementById('f-spirit').value.toLowerCase();
+    const attrs = {};
+
+    Object.keys(ATTR_KEYWORDS).forEach(attr=>{
+      attrs[attr] = ATTR_KEYWORDS[attr].some(kw=>ingredientsText.includes(kw)) ? 1 : 0;
+    });
+
+    attrs.RumBased = (spiritText.includes('rum') || ingredientsText.includes('rum')) ? 1 : 0;
+
+    attrs.Shaken = methodText.includes('shake') ? 1 : 0;
+    attrs.Stirred = methodText.includes('stir') ? 1 : 0;
+    attrs.Built = methodText.includes('build') ? 1 : 0;
+    attrs.Blended = methodText.includes('blend') ? 1 : 0;
+    attrs.Muddled = stepsText.includes('muddle') ? 1 : 0;
+    attrs.Layered = stepsText.includes('layer') ? 1 : 0;
+    attrs.Hot = (stepsText.includes('warm') || stepsText.includes('hot') || stepsText.includes('heat')) ? 1 : 0;
+    attrs.CrushedIce = (stepsText.includes('crushed ice') || ingredientsText.includes('crushed ice')) ? 1 : 0;
+    attrs.StraightUp = (stepsText.includes('straight-up') || stepsText.includes('straight up') || stepsText.includes('without ice') ||
+      /\b(coupe|martini|nick\s*&\s*nora|snifter)\b/.test(glassText)) ? 1 : 0;
+
+    return attrs;
+  }
+
+  function suggestCategory(){
+    const userAttrs = inferAttributesFromForm();
+    let best = null, bestPct = -1, bestCompared = 0;
+    Object.keys(FAMILY_MATRIX).forEach(family=>{
+      const fp = FAMILY_MATRIX[family];
+      let matches = 0, compared = 0;
+      Object.keys(fp).forEach(attr=>{
+        compared++;
+        if(userAttrs[attr] === fp[attr]) matches++;
+      });
+      const pct = compared > 0 ? matches / compared : 0;
+      if(compared > 0 && (pct > bestPct || (pct === bestPct && compared > bestCompared))){
+        best = family; bestPct = pct; bestCompared = compared;
+      }
+    });
+    if(best === null || bestPct <= 0) return null;
+    return { family: best, pct: bestPct };
+  }
+
+  function refreshDynamicOptions(){
+    // Categorie-filter toont alléén de 36 Difford's Guide-families als opties (geen vrije data)
+    const prevCategoryValue = filterCategory.value;
+    filterCategory.innerHTML = '<option value="">Categories</option>' +
+      COCKTAIL_FAMILIES.map(v=>`<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join('');
+    if(COCKTAIL_FAMILIES.includes(prevCategoryValue)) filterCategory.value = prevCategoryValue;
+    const dlCategory = document.getElementById('dlCategory');
+    if(dlCategory){
+      const catValues = [...new Set([...COCKTAIL_FAMILIES, ...distinctValues('category')])].sort((a,b)=>a.localeCompare(b,'nl'));
+      dlCategory.innerHTML = catValues.map(v=>`<option value="${escapeHTML(v)}">`).join('');
+    }
+
+    const specs = [
+      {select:filterMethod, field:'method', placeholder:'Methods', datalist:'dlMethod'},
+      {select:filterGlass, field:'glass', placeholder:'Glasses', datalist:'dlGlass'}
+    ];
+    specs.forEach(spec=>{
+      const values = distinctValues(spec.field);
+      const prevValue = spec.select.value;
+      spec.select.innerHTML = `<option value="">${spec.placeholder}</option>` +
+        values.map(v=>`<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`).join('');
+      if(values.includes(prevValue)) spec.select.value = prevValue;
+
+      const dl = document.getElementById(spec.datalist);
+      if(dl) dl.innerHTML = values.map(v=>`<option value="${escapeHTML(v)}">`).join('');
+    });
+
+    // dlSpirit still feeds the "Basisdrank" field in the add/edit form, even without a filter dropdown
+    const dlSpirit = document.getElementById('dlSpirit');
+    if(dlSpirit){
+      const spiritValues = distinctValues('spirit');
+      dlSpirit.innerHTML = spiritValues.map(v=>`<option value="${escapeHTML(v)}">`).join('');
+    }
+
+    // drop any selected ingredients that no longer exist, then rebuild the checkbox list
+    const allNames = distinctIngredientNames();
+    const allNamesSet = new Set(allNames);
+    [...selectedIngredients].forEach(n=>{ if(!allNamesSet.has(n)) selectedIngredients.delete(n); });
+    renderIngredientChecklist(allNames);
+    updateIngredientFilterButton();
+  }
+
+  function renderIngredientChecklist(allNames){
+    const q = ingredientFilterSearch.value.trim().toLowerCase();
+    const filtered = q ? allNames.filter(n=>n.toLowerCase().includes(q)) : allNames;
+    if(filtered.length === 0){
+      ingredientFilterList.innerHTML = '<div class="multiselect-empty">No ingredients found.</div>';
+      return;
+    }
+    ingredientFilterList.innerHTML = filtered.map(n=>{
+      const checked = selectedIngredients.has(n) ? 'checked' : '';
+      return `<label><input type="checkbox" value="${escapeHTML(n)}" ${checked}> ${escapeHTML(n)}</label>`;
+    }).join('');
+    ingredientFilterList.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.addEventListener('change', ()=>{
+        if(cb.checked) selectedIngredients.add(cb.value);
+        else selectedIngredients.delete(cb.value);
+        updateIngredientFilterButton();
+        resetPagingAndRender();
+      });
+    });
+  }
+
+  function updateIngredientFilterButton(){
+    const n = selectedIngredients.size;
+    ingredientFilterBtn.textContent = n === 0 ? 'Ingredients' : `Ingredients (${n})`;
+    ingredientFilterBtn.classList.toggle('has-selection', n > 0);
+  }
+
+  function canMake(r){
+    if(!r.ingredients || r.ingredients.length === 0) return false;
+    return ingredientNamesOf(r).every(n=> isInStock(n));
+  }
+
+  function missingIngredientsOf(r){
+    return ingredientNamesOf(r).filter(n=> !isInStock(n));
+  }
+
+  function estimateRecipePrice(r){
+    let total = 0;
+    let pricedCount = 0;
+    const missingNames = [];
+    r.ingredients.forEach(line=>{
+      const name = parseIngredientName(line);
+      const amount = parseIngredientAmount(line);
+      const entry = getStockEntry(name);
+      if(entry.price != null && amount != null){
+        total += amount * entry.price;
+        pricedCount++;
+      }else{
+        missingNames.push(name);
+      }
+    });
+    if(pricedCount === 0) return null;
+    return { total, missingCount: missingNames.length, missingNames, complete: missingNames.length === 0 };
+  }
+
+  function matchesFilters(r, q, scope, cat, ingredientNames, method, glass, makeable, tasteFilters){
+    if(q){
+      const nameHay = r.name.toLowerCase();
+      const ingHay = r.ingredients.join(' ').toLowerCase();
+      let hit;
+      if(scope === 'name') hit = nameHay.includes(q);
+      else if(scope === 'ingredient') hit = ingHay.includes(q);
+      else hit = nameHay.includes(q) || ingHay.includes(q);
+      if(!hit) return false;
+    }
+    if(cat && r.category !== cat) return false;
+    if(ingredientNames && ingredientNames.size > 0){
+      const recipeNames = new Set(ingredientNamesOf(r).map(n=>n.toLowerCase()));
+      for(const needed of ingredientNames){
+        if(!recipeNames.has(needed.toLowerCase())) return false;
+      }
+    }
+    if(method && r.method !== method) return false;
+    if(glass && r.glass !== glass) return false;
+    if(makeable === 'yes' && !canMake(r)) return false;
+    if(makeable === 'no' && canMake(r)) return false;
+    if(tasteFilters){
+      const taste = r.taste || {};
+      for(const axis in tasteFilters){
+        const wanted = tasteFilters[axis];
+        if(wanted && taste[axis] !== wanted) return false;
+      }
+    }
+    return true;
+  }
+
+  function sortRecipes(list, mode, direction){
+    const dir = direction === 'desc' ? -1 : 1;
+    const copy = [...list];
+
+    function keyOf(r){
+      switch(mode){
+        case 'difficulty': return DIFF_ORDER[r.difficulty] ?? 1;
+        case 'glass': return (r.glass || '').toLowerCase();
+        case 'spirit': return (r.spirit || '').toLowerCase();
+        case 'rating': return r.rating; // may be null/undefined
+        case 'price': { const est = estimateRecipePrice(r); return est ? est.total : null; }
+        default: return r.name.toLowerCase();
+      }
+    }
+
+    copy.sort((a,b)=>{
+      const ka = keyOf(a), kb = keyOf(b);
+      const aMissing = (ka === null || ka === undefined);
+      const bMissing = (kb === null || kb === undefined);
+      if(aMissing && bMissing) return a.name.localeCompare(b.name,'en');
+      if(aMissing) return 1;   // recipes without this data always sink to the bottom
+      if(bMissing) return -1;
+      const cmp = (typeof ka === 'string') ? ka.localeCompare(kb,'en') : (ka - kb);
+      return (dir * cmp) || a.name.localeCompare(b.name,'en');
+    });
+    return copy;
+  }
+
+  function render(){
+    const q = searchInput.value.trim().toLowerCase();
+    const scope = searchScope.value;
+    const cat = filterCategory.value;
+    const method = filterMethod.value;
+    const glass = filterGlass.value;
+    const makeable = filterMakeable.value;
+    const mode = currentSortMode;
+
+    let visible = recipes.filter(r=>matchesFilters(r,q,scope,cat,selectedIngredients,method,glass,makeable,selectedTaste));
+    visible = sortRecipes(visible, mode, currentSortDirection);
+
+    const makeableTotal = recipes.filter(canMake).length;
+    countPill.textContent = `${recipes.length} recipes (${visible.length} shown)`;
+    makeablePill.textContent = `${makeableTotal} makeable with your stock`;
+
+    listEl.innerHTML = '';
+    if(visible.length===0){
+      emptyState.style.display='block';
+      loadMoreWrap.style.display='none';
+      return;
+    }
+    emptyState.style.display='none';
+
+    const slice = visible.slice(0, currentPageSize);
+
+    slice.forEach(r=>{
+      const det = document.createElement('details');
+      det.className = 'recipe';
+      const icon = getGlassIcon(r.glass);
+      const makeableNow = canMake(r);
+      const ingPreview = sortedIngredientLines(r).map(parseIngredientName).join(', ');
+      const priceEst = estimateRecipePrice(r);
+
+      det.innerHTML = `
+        <summary>
+          <div class="summary-row">
+            ${icon}
+            <span class="r-name">${escapeHTML(r.name)}</span>
+            ${r.category ? `<span class="tag tag-cat">${escapeHTML(r.category)}</span>` : ''}
+            ${r.method ? `<span class="tag tag-method">${escapeHTML(r.method)}</span>` : ''}
+            <span class="tag tag-diff-${r.difficulty}">${escapeHTML(r.difficulty)}</span>
+            ${makeableNow ? '<span class="tag tag-makeable-yes">✓ Makeable</span>' : '<span class="tag tag-makeable-no">Missing ingredient</span>'}
+            ${priceEst ? `<span class="tag tag-price" title="${priceEst.complete ? 'Estimated price based on your stock prices' : `Missing price: ${escapeHTML(priceEst.missingNames.join(', '))}`}">${priceEst.complete ? '' : '~'}€${priceEst.total.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` : ''}
+            ${ratingBadgeHTML(r.rating)}
+            <span class="arrow">›</span>
+          </div>
+          ${ingPreview ? `<div class="ing-preview">${escapeHTML(ingPreview)}</div>` : ''}
+        </summary>
+        <div class="recipe-body">
+          <div>
+            <h4>Ingredients</h4>
+            <ul>${sortedIngredientLines(r).map(i=>`<li>${escapeHTML(i)}</li>`).join('')}</ul>
+            <p class="recipe-meta-line"><strong>Glass:</strong> ${escapeHTML(r.glass || '—')}</p>
+            <p class="recipe-meta-line"><strong>Garnish:</strong> ${escapeHTML(r.garnish || '—')}</p>
+            <p class="recipe-meta-line"><strong>Estimated price:</strong> ${priceEst ? `${priceEst.complete ? '' : '~'}€${priceEst.total.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2})}${priceEst.complete ? '' : ` (missing price: ${escapeHTML(priceEst.missingNames.join(', '))})`}` : 'unknown — add prices on the Stock page'}</p>
+          </div>
+          <div>
+            <h4>Instructions</h4>
+            <ol>${r.steps.map(s=>`<li>${escapeHTML(s)}</li>`).join('')}</ol>
+            ${r.notes ? `<h4>Notes</h4><p class="recipe-meta-line">${escapeHTML(r.notes)}</p>` : ''}
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-ghost edit-btn" data-id="${r.id}">Edit</button>
+            <button class="btn btn-danger delete-btn" data-id="${r.id}">Delete</button>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(det);
+    });
+
+    listEl.querySelectorAll('.edit-btn').forEach(b=>b.addEventListener('click', e=>{
+      e.preventDefault();
+      openForm(b.dataset.id);
+    }));
+    listEl.querySelectorAll('.delete-btn').forEach(b=>b.addEventListener('click', e=>{
+      e.preventDefault();
+      const id = b.dataset.id;
+      const r = recipes.find(x=>x.id===id);
+      if(r && confirm(`Delete "${r.name}"? This cannot be undone.`)){
+        recipes = recipes.filter(x=>x.id!==id);
+        save(recipes);
+        refreshDynamicOptions();
+        render();
+      }
+    }));
+
+    if(visible.length > currentPageSize){
+      loadMoreWrap.style.display='flex';
+      loadMoreBtn.textContent = `Show more (${visible.length - currentPageSize} remaining)`;
+    }else{
+      loadMoreWrap.style.display='none';
+    }
+  }
+
+  loadMoreBtn.addEventListener('click', ()=>{
+    currentPageSize += PAGE_SIZE;
+    render();
+  });
+
+  function resetPagingAndRender(){
+    currentPageSize = PAGE_SIZE;
+    render();
+  }
+
+  /* ---------- Rating slider ---------- */
+  function updateRatingLabel(){
+    if(ratingUntasted.checked){
+      ratingLabel.textContent = '–';
+      ratingSlider.disabled = true;
+    }else{
+      ratingSlider.disabled = false;
+      ratingLabel.textContent = formatRating(Number(ratingSlider.value)) + '/10';
+    }
+  }
+  ratingSlider.addEventListener('input', ()=>{
+    if(!ratingUntasted.checked) ratingLabel.textContent = formatRating(Number(ratingSlider.value)) + '/10';
+  });
+  ratingSlider.addEventListener('pointerdown', ()=>{ ratingUntasted.checked=false; updateRatingLabel(); });
+  ratingUntasted.addEventListener('change', updateRatingLabel);
+
+  /* ---------- Form open/close/submit ---------- */
+  function openForm(id){
+    recipeForm.reset();
+    document.getElementById('categorySuggestionHint').textContent = '';
+    if(id){
+      const r = recipes.find(x=>x.id===id);
+      if(!r) return;
+      formTitle.textContent = 'Edit recipe';
+      document.getElementById('recipeId').value = r.id;
+      document.getElementById('f-name').value = r.name;
+      document.getElementById('f-category').value = r.category || '';
+      document.getElementById('f-spirit').value = r.spirit || '';
+      document.getElementById('f-glass').value = r.glass || '';
+      document.getElementById('f-method').value = r.method || '';
+      document.getElementById('f-difficulty').value = r.difficulty || 'Medium';
+      document.getElementById('f-ingredients').value = r.ingredients.join('\n');
+      document.getElementById('f-method-steps').value = r.steps.join('\n');
+      document.getElementById('f-garnish').value = r.garnish || '';
+      document.getElementById('f-notes').value = r.notes || '';
+      const taste = r.taste || {};
+      TASTE_AXES.forEach(axis=>{
+        document.getElementById(`f-taste-${axis}`).value = taste[axis] || '';
+      });
+      if(r.rating == null){
+        ratingUntasted.checked = true;
+        ratingSlider.value = 0;
+      }else{
+        ratingUntasted.checked = false;
+        ratingSlider.value = r.rating;
+      }
+      updateRatingLabel();
+    }else{
+      formTitle.textContent = 'New recipe';
+      document.getElementById('recipeId').value = '';
+      document.getElementById('f-difficulty').value = 'Medium';
+      ratingUntasted.checked = true;
+      ratingSlider.value = 0;
+      updateRatingLabel();
+    }
+    formPanel.classList.add('open');
+    formPanel.scrollIntoView({behavior:'smooth', block:'start'});
+    document.getElementById('f-name').focus();
+  }
+
+  function closeForm(){
+    formPanel.classList.remove('open');
+    recipeForm.reset();
+    ratingUntasted.checked = true;
+    ratingSlider.value = 0;
+    updateRatingLabel();
+  }
+
+  addBtn.addEventListener('click', ()=>openForm(null));
+  cancelBtn.addEventListener('click', closeForm);
+
+  const suggestCategoryBtn = document.getElementById('suggestCategoryBtn');
+  const categorySuggestionHint = document.getElementById('categorySuggestionHint');
+  suggestCategoryBtn.addEventListener('click', ()=>{
+    const result = suggestCategory();
+    if(!result){
+      categorySuggestionHint.textContent = "Couldn't determine a suggestion — fill in ingredients/method/instructions first.";
+      return;
+    }
+    document.getElementById('f-category').value = result.family;
+    const pctText = Math.round(result.pct * 100);
+    categorySuggestionHint.textContent = `Suggestion: ${result.family} (${pctText}% match on known traits) — review before saving, not every cocktail fits neatly into one family.`;
+  });
+
+  recipeForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    const id = document.getElementById('recipeId').value;
+    const ingredients = document.getElementById('f-ingredients').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const steps = document.getElementById('f-method-steps').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const taste = {};
+    TASTE_AXES.forEach(axis=>{
+      const v = document.getElementById(`f-taste-${axis}`).value;
+      if(v) taste[axis] = v;
+    });
+
+    const data = {
+      name: document.getElementById('f-name').value.trim(),
+      category: document.getElementById('f-category').value.trim(),
+      spirit: document.getElementById('f-spirit').value.trim(),
+      glass: document.getElementById('f-glass').value.trim(),
+      method: document.getElementById('f-method').value.trim(),
+      difficulty: document.getElementById('f-difficulty').value,
+      ingredients,
+      steps,
+      garnish: document.getElementById('f-garnish').value.trim(),
+      notes: document.getElementById('f-notes').value.trim(),
+      rating: ratingUntasted.checked ? null : Number(ratingSlider.value),
+      taste,
+      source: 'manual'
+    };
+
+    if(!data.name || ingredients.length===0 || steps.length===0){
+      alert('Please fill in at least a name, one ingredient and one instruction step.');
+      return;
+    }
+
+    if(id){
+      const idx = recipes.findIndex(x=>x.id===id);
+      if(idx>-1) recipes[idx] = {...recipes[idx], ...data};
+    }else{
+      recipes.push({id: uid(), ...data});
+    }
+    save(recipes);
+    refreshDynamicOptions();
+    closeForm();
+    render();
+  });
+
+  const SEARCH_PLACEHOLDERS = {
+    both: 'Search by name or ingredient…',
+    name: 'Search by cocktail name…',
+    ingredient: 'Search by ingredient…'
+  };
+  function updateSearchPlaceholder(){
+    searchInput.placeholder = SEARCH_PLACEHOLDERS[searchScope.value] || SEARCH_PLACEHOLDERS.both;
+  }
+  searchScope.addEventListener('change', updateSearchPlaceholder);
+  updateSearchPlaceholder();
+
+  [searchInput, searchScope, filterCategory, filterMethod, filterGlass, filterMakeable].forEach(el=>{
+    el.addEventListener('input', resetPagingAndRender);
+    el.addEventListener('change', resetPagingAndRender);
+  });
+
+  /* ---------- Ingredient multiselect panel ---------- */
+  ingredientFilterBtn.addEventListener('click', ()=>{
+    const willOpen = ingredientFilterPanel.hidden;
+    ingredientFilterPanel.hidden = !willOpen;
+    if(willOpen){
+      ingredientFilterSearch.value = '';
+      renderIngredientChecklist(distinctIngredientNames());
+      ingredientFilterSearch.focus();
+    }
+  });
+  ingredientFilterSearch.addEventListener('input', ()=>{
+    renderIngredientChecklist(distinctIngredientNames());
+  });
+  ingredientFilterClear.addEventListener('click', ()=>{
+    selectedIngredients.clear();
+    updateIngredientFilterButton();
+    renderIngredientChecklist(distinctIngredientNames());
+    resetPagingAndRender();
+  });
+  document.addEventListener('click', (e)=>{
+    if(!ingredientFilterWrap.contains(e.target)) ingredientFilterPanel.hidden = true;
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') ingredientFilterPanel.hidden = true;
+  });
+
+  /* ---------- Import info popover ---------- */
+  const importInfoWrap = document.getElementById('importInfoWrap');
+  const importInfoBtn = document.getElementById('importInfoBtn');
+  const importInfoPopover = document.getElementById('importInfoPopover');
+  importInfoBtn.addEventListener('click', ()=>{
+    importInfoPopover.hidden = !importInfoPopover.hidden;
+  });
+  document.addEventListener('click', (e)=>{
+    if(!importInfoWrap.contains(e.target)) importInfoPopover.hidden = true;
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') importInfoPopover.hidden = true;
+  });
+
+  /* ---------- Sort icon panel ---------- */
+  function updateSortOptionStyles(){
+    sortFilterPanel.querySelectorAll('.sort-option').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.sort === currentSortMode);
+    });
+    sortFilterPanel.querySelectorAll('.sort-dir-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.dir === currentSortDirection);
+    });
+  }
+  sortFilterBtn.addEventListener('click', ()=>{
+    sortFilterPanel.hidden = !sortFilterPanel.hidden;
+  });
+  sortFilterPanel.querySelectorAll('.sort-option').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentSortMode = btn.dataset.sort;
+      updateSortOptionStyles();
+      sortFilterPanel.hidden = true;
+      resetPagingAndRender();
+    });
+  });
+  sortFilterPanel.querySelectorAll('.sort-dir-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentSortDirection = btn.dataset.dir;
+      updateSortOptionStyles();
+      resetPagingAndRender();
+    });
+  });
+  document.addEventListener('click', (e)=>{
+    if(!sortFilterWrap.contains(e.target)) sortFilterPanel.hidden = true;
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') sortFilterPanel.hidden = true;
+  });
+  updateSortOptionStyles();
+
+  /* ---------- Taste filter panel ---------- */
+  const tasteFilterWrap = document.getElementById('tasteFilterWrap');
+  const tasteFilterBtn = document.getElementById('tasteFilterBtn');
+  const tasteFilterPanel = document.getElementById('tasteFilterPanel');
+  const tasteFilterClear = document.getElementById('tasteFilterClear');
+  const tasteFilterSelects = tasteFilterPanel.querySelectorAll('select[data-axis]');
+
+  function updateTasteFilterButton(){
+    const n = Object.keys(selectedTaste).filter(k=>selectedTaste[k]).length;
+    tasteFilterBtn.textContent = n === 0 ? 'Taste' : `Taste (${n})`;
+    tasteFilterBtn.classList.toggle('has-selection', n > 0);
+  }
+  tasteFilterBtn.addEventListener('click', ()=>{
+    tasteFilterPanel.hidden = !tasteFilterPanel.hidden;
+  });
+  tasteFilterSelects.forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const axis = sel.dataset.axis;
+      if(sel.value) selectedTaste[axis] = sel.value;
+      else delete selectedTaste[axis];
+      updateTasteFilterButton();
+      resetPagingAndRender();
+    });
+  });
+  tasteFilterClear.addEventListener('click', ()=>{
+    selectedTaste = {};
+    tasteFilterSelects.forEach(sel=>{ sel.value = ''; });
+    updateTasteFilterButton();
+    resetPagingAndRender();
+  });
+  document.addEventListener('click', (e)=>{
+    if(!tasteFilterWrap.contains(e.target)) tasteFilterPanel.hidden = true;
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') tasteFilterPanel.hidden = true;
+  });
+
+  clearAllBtn.addEventListener('click', ()=>{
+    if(confirm('Are you sure you want to delete ALL recipes? This cannot be undone.')){
+      recipes = [];
+      save(recipes);
+      refreshDynamicOptions();
+      resetPagingAndRender();
+    }
+  });
+
+  /* ---------- Excel import ---------- */
+  importBtn.addEventListener('click', ()=>excelFileInput.click());
+  excelFileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(file) handleExcelFile(file);
+    excelFileInput.value = '';
+  });
+
+  const METHOD_STEP = {
+    'shake':'Shake all ingredients hard with ice.',
+    'stir':'Stir all ingredients with ice.',
+    'build-in-glass':'Build directly in the glass.',
+    'whip shake':'Whip shake: first briefly without ice, then shake with ice.',
+    'blend':'Blend all ingredients with crushed ice.',
+    'heat':'Heat the ingredients.',
+    'mix':'Mix the ingredients.'
+  };
+
+  function fmtAmount(v){
+    if(v==null || v==='') return null;
+    const n = Number(v);
+    if(Number.isNaN(n)) return String(v);
+    return Number.isInteger(n) ? String(n) : String(Math.round(n*100)/100);
+  }
+
+  async function handleExcelFile(file){
+    if(typeof XLSX === 'undefined'){
+      alert('The Excel library could not be loaded. Check your internet connection and try again.');
+      return;
+    }
+    try{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+
+      const dbSheetName = wb.SheetNames.find(n=>n.trim().toLowerCase()==='database') || wb.SheetNames[0];
+      const dbSheet = wb.Sheets[dbSheetName];
+      const rows = XLSX.utils.sheet_to_json(dbSheet, {header:1, defval:null, raw:true});
+      if(!rows || rows.length<2){
+        alert('Could not find any data in the Excel file.');
+        return;
+      }
+      const headers = rows[0].map(h=>(h==null?'':String(h).trim()));
+      const idx = {};
+      headers.forEach((h,i)=>{ if(h && !(h in idx)) idx[h]=i; });
+      function get(row, key){ return (key in idx) ? row[idx[key]] : null; }
+
+      // Ratings from "Geproefd" sheet, matched by Nummer
+      let ratingMap = {};
+      const gepName = wb.SheetNames.find(n=>n.trim().toLowerCase()==='geproefd');
+      if(gepName){
+        const gRows = XLSX.utils.sheet_to_json(wb.Sheets[gepName], {header:1, defval:null, raw:true});
+        if(gRows && gRows.length>1){
+          const gHeaders = gRows[0].map(h=>(h==null?'':String(h).trim()));
+          const gIdx = {};
+          gHeaders.forEach((h,i)=>{ if(h && !(h in gIdx)) gIdx[h]=i; });
+          if('Nummer' in gIdx && 'Cijfer uit de 10' in gIdx){
+            for(let i=1;i<gRows.length;i++){
+              const row = gRows[i];
+              const num = row[gIdx['Nummer']];
+              const score = row[gIdx['Cijfer uit de 10']];
+              if(num!=null && score!=null) ratingMap[num] = Number(score);
+            }
+          }
+        }
+      }
+
+      // Merk/prijs/voorraad komen uit de eerste van deze tabbladen die zowel bestaat als
+      // een 'Ingrediënt'-kolom heeft: "Standaarden Uitgebreid" (jouw prijzentabel) heeft
+      // voorrang boven "Standaarden" (dat in jouw bestand een heel andere, categorie-
+      // checklist-tabel is en dus wordt overgeslagen als de kolommen niet passen).
+      let stockUpdated = 0;
+      const stdCandidates = wb.SheetNames.filter(n=>{
+        const lower = n.trim().toLowerCase();
+        return lower === 'standaarden uitgebreid' || lower === 'standaarden';
+      }).sort((a,b)=>{
+        const rank = n => n.trim().toLowerCase() === 'standaarden uitgebreid' ? 0 : 1;
+        return rank(a) - rank(b);
+      });
+      let stdName = null;
+      for(const candidate of stdCandidates){
+        const testRows = XLSX.utils.sheet_to_json(wb.Sheets[candidate], {header:1, defval:null, raw:true});
+        if(testRows && testRows.length>1){
+          const testHeaders = testRows[0].map(h=>(h==null?'':String(h).trim().toLowerCase()));
+          if(testHeaders.includes('ingrediënt')){ stdName = candidate; break; }
+        }
+      }
+      if(stdName){
+        const sRows = XLSX.utils.sheet_to_json(wb.Sheets[stdName], {header:1, defval:null, raw:true});
+        if(sRows && sRows.length>1){
+          // header lookup is case-insensitive & trimmed, so small differences in casing/whitespace
+          // in the user's sheet (e.g. "Op Voorraad" vs "Op voorraad") don't silently break the import
+          const sHeaders = sRows[0].map(h=>(h==null?'':String(h).trim()));
+          const sIdx = {};
+          sHeaders.forEach((h,i)=>{ const key = h.toLowerCase(); if(h && !(key in sIdx)) sIdx[key]=i; });
+          const sGet = (row,key)=> (key.toLowerCase() in sIdx) ? row[sIdx[key.toLowerCase()]] : null;
+          if('ingrediënt' in sIdx){
+            for(let i=1;i<sRows.length;i++){
+              const row = sRows[i];
+              const ingName = sGet(row,'Ingrediënt');
+              if(!ingName) continue;
+              const key = String(ingName).trim().toLowerCase();
+              const entry = stock[key] || { inStock:false, merk:'', price:null, priceUnit:'ml' };
+
+              const opVoorraadRaw = sGet(row,'Op voorraad');
+              if(opVoorraadRaw != null && opVoorraadRaw !== ''){
+                const opVoorraadStr = String(opVoorraadRaw).trim().toUpperCase();
+                entry.inStock = (opVoorraadRaw === true || opVoorraadStr === 'TRUE' || opVoorraadStr === 'WAAR' || opVoorraadStr === '1');
+              }
+              const merkVal = sGet(row,'Merk');
+              if(merkVal) entry.merk = String(merkVal).trim();
+
+              let prijsPerMl = sGet(row,'Prijs/mL');
+              if(prijsPerMl == null || prijsPerMl === ''){
+                const prijsPerL = sGet(row,'Prijs/L');
+                if(prijsPerL != null && prijsPerL !== '') prijsPerMl = Number(prijsPerL) / 1000;
+              }
+              if(prijsPerMl != null && prijsPerMl !== '' && !Number.isNaN(Number(prijsPerMl))){
+                entry.price = Number(prijsPerMl);
+                entry.priceUnit = 'ml';
+              }
+
+              stock[key] = entry;
+              stockUpdated++;
+            }
+          }
+        }
+      }
+
+      let added=0, updated=0, skippedManual=0, ratedCount=0;
+      const byName = new Map(recipes.map(r=>[r.name.trim().toLowerCase(), r]));
+
+      for(let i=1;i<rows.length;i++){
+        const row = rows[i];
+        const name = get(row,'Naam');
+        if(!name) continue;
+        const key = String(name).trim().toLowerCase();
+        const existing = byName.get(key);
+        if(existing && existing.source === 'manual'){ skippedManual++; continue; }
+
+        const ingredientLines = [];
+        for(let n=1;n<=7;n++){
+          const nm = get(row, `Alcohol ${n}`);
+          const amt = get(row, `Alc-Hoe ${n}`);
+          if(nm){
+            const a = fmtAmount(amt);
+            ingredientLines.push(a ? `${a} ml ${nm}` : String(nm));
+          }
+        }
+        for(let n=1;n<=8;n++){
+          const nm = get(row, `Vrij ${n}`);
+          const amt = get(row, `Vrij-Hoe ${n}`);
+          if(nm){
+            const a = fmtAmount(amt);
+            ingredientLines.push(a ? `${a} ml ${nm}` : String(nm));
+          }
+        }
+
+        let spirit = 'Non-alcoholic';
+        const firstAlc = get(row,'Alcohol 1');
+        if(firstAlc) spirit = String(firstAlc).split(' - ')[0].trim();
+
+        const methodRaw = get(row,'Method');
+        const methodNorm = normalizeMethod(methodRaw ? String(methodRaw).trim() : '');
+        const sidenote = get(row,'Sidenote');
+        const ice = get(row,'Ice');
+        const glassVal = get(row,'Glass');
+        const glassText = glassVal ? String(glassVal).trim() : 'Unknown';
+        const garnishVal = get(row,'Garnish');
+
+        const steps = [];
+
+        // Step 1 — how to make it (Method + Sidenote)
+        let step1 = METHOD_STEP[methodNorm.toLowerCase()] || (methodNorm ? `${methodNorm}.` : 'Method not specified.');
+        if(sidenote) step1 += ` ${String(sidenote).trim()}`;
+        steps.push(step1);
+
+        // Step 2 — glass + ice in the glass
+        let step2 = `Serve in a ${glassText} glass`;
+        if(ice && String(ice).trim() !== '' && String(ice).trim().toLowerCase() !== 'no'){
+          step2 += ` with ${String(ice).trim().toLowerCase()} ice`;
+        }else{
+          step2 += ', no ice';
+        }
+        steps.push(step2 + '.');
+
+        // Step 3 — garnish
+        steps.push(garnishVal ? `Garnish with ${String(garnishVal).trim()}.` : 'No garnish.');
+
+        let ingCount = get(row,'Aantal Ingrediënten');
+        ingCount = (ingCount!=null) ? Number(ingCount) : ingredientLines.length;
+        let difficulty = 'Medium';
+        if(ingCount<=3) difficulty='Easy';
+        else if(ingCount>=7) difficulty='Hard';
+
+        const noteLines = [];
+        const sourceCredit = get(row,'Source');
+        if(sourceCredit) noteLines.push(`Source: ${sourceCredit}`);
+        const prijs = get(row,'Prijs');
+        if(prijs!=null && !Number.isNaN(Number(prijs))){
+          noteLines.push(`Estimated cost: €${Number(prijs).toFixed(2)}`);
+        }
+
+        const nummer = get(row,'Nummer');
+        let rating = null;
+        if(nummer!=null && ratingMap[nummer]!=null){
+          rating = Number(ratingMap[nummer]);
+          ratedCount++;
+        }
+
+        const categorieRaw = get(row,'Categorie');
+        const categorieFromExcel = (categorieRaw != null && String(categorieRaw).trim() !== '')
+          ? String(categorieRaw).trim() : null;
+
+        const fresh = {
+          name: String(name).trim(),
+          spirit,
+          method: methodNorm || 'Unknown',
+          glass: glassText,
+          difficulty,
+          ingredients: ingredientLines,
+          steps,
+          garnish: garnishVal ? String(garnishVal).trim() : '',
+          notes: noteLines.join('\n'),
+          rating,
+          source: 'excel'
+        };
+
+        if(existing){
+          Object.assign(existing, fresh);   // keep existing.id and existing.category
+          if(categorieFromExcel !== null) existing.category = categorieFromExcel;   // ...tenzij Excel er nu een geeft
+          updated++;
+        }else{
+          const created = { id: uid(), category: categorieFromExcel || '', ...fresh };
+          recipes.push(created);
+          byName.set(key, created);
+          added++;
+        }
+      }
+
+      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      updateLastSyncHint();
+      save(recipes);
+      if(stockUpdated > 0) saveStock(stock);
+      refreshDynamicOptions();
+      resetPagingAndRender();
+      if(!stockView.hidden) renderStockView();
+      const stockLine = stdName ? `\nStock (brand/price) updated: ${stockUpdated} ingredients` : '';
+      alert(`Refresh complete.\n\nNewly added: ${added} recipes\nUpdated: ${updated} recipes\nSkipped (manually edited, left unchanged): ${skippedManual}\nOwn ratings included: ${ratedCount}${stockLine}`);
+    }catch(err){
+      console.error(err);
+      alert('Refresh failed: could not read the Excel file properly. Check that the "Database" sheet has the expected column names.');
+    }
+  }
+
+  refreshDynamicOptions();
+  updateLastSyncHint();
+  render();
+})();
+</script>
+</body>
+</html>
