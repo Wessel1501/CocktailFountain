@@ -1105,7 +1105,7 @@
   }
   function fsSaveStockEntry(key, entry){
     if(!db || !currentUser) return;
-    db.collection('stock').doc(sanitizeDocId(key)).set(entry).catch(e=>console.error('Firestore stock write failed', e));
+    db.collection('stock').doc(sanitizeDocId(key)).set({...entry, _key: key}).catch(e=>console.error('Firestore stock write failed', e));
   }
   function fsSaveStockBatch(stockObj, keys){
     if(!db || !currentUser || keys.length===0) return;
@@ -1113,7 +1113,7 @@
     for(let i=0;i<keys.length;i+=chunkSize){
       const batch = db.batch();
       keys.slice(i,i+chunkSize).forEach(k=>{
-        if(stockObj[k]) batch.set(db.collection('stock').doc(sanitizeDocId(k)), stockObj[k]);
+        if(stockObj[k]) batch.set(db.collection('stock').doc(sanitizeDocId(k)), {...stockObj[k], _key: k});
       });
       batch.commit().catch(e=>console.error('Firestore batch stock write failed', e));
     }
@@ -1146,7 +1146,11 @@
 
     db.collection('stock').onSnapshot(snapshot=>{
       const obj = {};
-      snapshot.forEach(d=>{ obj[d.id] = d.data(); });
+      snapshot.forEach(d=>{
+        const data = d.data();
+        const key = data._key || d.id;   // use the original key, not the sanitized doc id
+        obj[key] = data;
+      });
       if(Object.keys(obj).length > 0 || stockLoadedFromCloud){
         stock = obj;
         stockLoadedFromCloud = true;
