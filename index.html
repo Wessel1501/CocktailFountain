@@ -1631,7 +1631,7 @@
         case 'difficulty': return DIFF_ORDER[r.difficulty] ?? 1;
         case 'glass': return (r.glass || '').toLowerCase();
         case 'spirit': return (r.spirit || '').toLowerCase();
-        case 'rating': return r.rating; // may be null/undefined
+        case 'rating': return r.rating ?? 0; // unrated counts as the lowest possible rating
         case 'price': { const est = estimateRecipePrice(r); return est ? est.total : null; }
         default: return r.name.toLowerCase();
       }
