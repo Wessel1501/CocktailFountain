@@ -710,6 +710,7 @@
       <input type="text" id="stockSearch" placeholder="Search ingredient…">
       <button type="button" class="btn btn-ghost" id="stockCheckAllBtn">Check all (filtered)</button>
       <button type="button" class="btn btn-ghost" id="stockUncheckAllBtn">Uncheck all (filtered)</button>
+      <button type="button" class="btn btn-ghost" id="stockCleanupBtn">🧹 Clean up unused</button>
       <button type="button" class="btn btn-danger" id="stockClearBtn">Clear entire stock</button>
     </div>
     <div class="stock-grid" id="stockGrid"></div>
@@ -1128,6 +1129,17 @@
       return batch.commit();
     }).catch(e=>console.error('Firestore clear-all stock failed', e));
   }
+  function fsDeleteStockKeys(keys){
+    if(!db || !currentUser || keys.length===0) return;
+    const chunkSize = 450;
+    for(let i=0;i<keys.length;i+=chunkSize){
+      const batch = db.batch();
+      keys.slice(i,i+chunkSize).forEach(k=>{
+        batch.delete(db.collection('stock').doc(sanitizeDocId(k)));
+      });
+      batch.commit().catch(e=>console.error('Firestore stock cleanup delete failed', e));
+    }
+  }
 
   let recipesLoadedFromCloud = false;
   let stockLoadedFromCloud = false;
@@ -1375,6 +1387,22 @@
       stock = {};
       saveStock(stock);
       fsClearAllStock();
+      renderStockView();
+    }
+  });
+
+  document.getElementById('stockCleanupBtn').addEventListener('click', ()=>{
+    if(!requireAuth()) return;
+    const usedKeys = new Set(distinctIngredientNames().map(n=>n.toLowerCase()));
+    const orphanKeys = Object.keys(stock).filter(k=>!usedKeys.has(k));
+    if(orphanKeys.length === 0){
+      alert('Nothing to clean up — every ingredient in Stock is still used by a recipe.');
+      return;
+    }
+    if(confirm(`Remove ${orphanKeys.length} ingredient(s) from Stock that are no longer used in any recipe? Their brand/price data will be deleted.`)){
+      orphanKeys.forEach(k=>{ delete stock[k]; });
+      saveStock(stock);
+      fsDeleteStockKeys(orphanKeys);
       renderStockView();
     }
   });
