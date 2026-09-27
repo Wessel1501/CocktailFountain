@@ -173,6 +173,7 @@
   .row-3col{grid-template-columns:repeat(3, 1fr);}
   .row-2col{grid-template-columns:repeat(2, 1fr);}
   .list-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; position:relative;}
+  .list-header-left{display:flex; align-items:center; gap:8px;}
   .toolbar input[type="text"],
   .toolbar select{
     width:100%;
@@ -438,6 +439,18 @@
     .row-3col{grid-template-columns:1fr 1fr;}
     .tag-price, .tag-difficulty{display:none;}
   }
+
+  .back-to-top{
+    position:fixed; right:20px; bottom:20px; z-index:50;
+    width:44px; height:44px; border-radius:50%;
+    background:var(--accent); color:#fff; border:none;
+    font-size:1.2rem; line-height:1; cursor:pointer;
+    box-shadow:0 4px 14px var(--shadow);
+    opacity:0; visibility:hidden; transform:translateY(10px);
+    transition:opacity .2s ease, transform .2s ease, visibility .2s;
+  }
+  .back-to-top.visible{opacity:1; visibility:visible; transform:translateY(0);}
+  .back-to-top:hover{background:#8c3524;}
 </style>
 </head>
 <body>
@@ -557,20 +570,23 @@
   </div>
 
   <div class="list-header">
-    <div class="multiselect" id="sortFilterWrap">
-      <button type="button" class="icon-btn" id="sortFilterBtn" title="Sort">⇅</button>
-      <div class="multiselect-panel sort-panel" id="sortFilterPanel" hidden>
-        <div class="sort-direction-toggle">
-          <button type="button" class="sort-dir-btn" data-dir="asc">↑ Low–High</button>
-          <button type="button" class="sort-dir-btn" data-dir="desc">↓ High–Low</button>
+    <div class="list-header-left">
+      <div class="multiselect" id="sortFilterWrap">
+        <button type="button" class="icon-btn" id="sortFilterBtn" title="Sort">⇅</button>
+        <div class="multiselect-panel sort-panel" id="sortFilterPanel" hidden>
+          <div class="sort-direction-toggle">
+            <button type="button" class="sort-dir-btn" data-dir="asc">↑ Low–High</button>
+            <button type="button" class="sort-dir-btn" data-dir="desc">↓ High–Low</button>
+          </div>
+          <button type="button" class="sort-option" data-sort="name">Name (A-Z)</button>
+          <button type="button" class="sort-option" data-sort="difficulty">Difficulty</button>
+          <button type="button" class="sort-option" data-sort="glass">Glass type</button>
+          <button type="button" class="sort-option" data-sort="spirit">Base spirit</button>
+          <button type="button" class="sort-option" data-sort="rating">Rating</button>
+          <button type="button" class="sort-option" data-sort="price">Price</button>
         </div>
-        <button type="button" class="sort-option" data-sort="name">Name (A-Z)</button>
-        <button type="button" class="sort-option" data-sort="difficulty">Difficulty</button>
-        <button type="button" class="sort-option" data-sort="glass">Glass type</button>
-        <button type="button" class="sort-option" data-sort="spirit">Base spirit</button>
-        <button type="button" class="sort-option" data-sort="rating">Rating</button>
-        <button type="button" class="sort-option" data-sort="price">Price</button>
       </div>
+      <button type="button" class="btn btn-ghost" id="randomBtn">🎲 Random Cocktail</button>
     </div>
     <button class="btn btn-primary" id="addBtn">+ New recipe</button>
   </div>
@@ -721,6 +737,8 @@
   </div>
 
 </div>
+
+<button type="button" class="back-to-top" id="backToTopBtn" title="Back to top" aria-label="Back to top">↑</button>
 
 <script>
 (function(){
@@ -988,6 +1006,11 @@
     const m = line.match(/^\s*([\d]+(?:[.,]\d+)?)/);
     if(!m) return null;
     return parseFloat(m[1].replace(',', '.'));
+  }
+
+  function ingredientLineForDisplay(line){
+    // purely cosmetic: doesn't touch the stored line, so ingredient matching/stock/pricing stay unaffected
+    return parseIngredientAmount(line) === null ? `Missing Quantity — ${line}` : line;
   }
 
   function sortedIngredientLines(r){
@@ -1707,6 +1730,7 @@
     slice.forEach(r=>{
       const det = document.createElement('details');
       det.className = 'recipe';
+      det.dataset.id = r.id;
       const icon = getGlassIcon(r.glass);
       const makeableNow = canMake(r);
       const ingPreview = sortedIngredientLines(r).map(parseIngredientName).join(', ');
@@ -1732,7 +1756,7 @@
         <div class="recipe-body">
           <div>
             <h4>Ingredients</h4>
-            <ul>${sortedIngredientLines(r).map(i=>`<li>${escapeHTML(i)}</li>`).join('')}</ul>
+            <ul>${sortedIngredientLines(r).map(i=>`<li>${escapeHTML(ingredientLineForDisplay(i))}</li>`).join('')}</ul>
             <p class="recipe-meta-line"><strong>Glass:</strong> ${escapeHTML(r.glass || '—')}</p>
             <p class="recipe-meta-line"><strong>Garnish:</strong> ${escapeHTML(r.garnish || '—')}</p>
             <p class="recipe-meta-line"><strong>Estimated price:</strong> ${priceEst ? `${priceEst.complete ? '' : '~'}€${priceEst.total.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2})}${priceEst.complete ? '' : ` (missing price: ${escapeHTML(priceEst.missingNames.join(', '))})`}` : 'unknown — add prices on the Stock page'}</p>
@@ -2323,6 +2347,44 @@
   refreshDynamicOptions();
   updateLastSyncHint();
   render();
+
+  /* ---------- Back to top ---------- */
+  const backToTopBtn = document.getElementById('backToTopBtn');
+  window.addEventListener('scroll', ()=>{
+    backToTopBtn.classList.toggle('visible', window.scrollY > 400);
+  });
+  backToTopBtn.addEventListener('click', ()=>{
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  /* ---------- Random cocktail ---------- */
+  document.getElementById('randomBtn').addEventListener('click', ()=>{
+    const q = searchInput.value.trim().toLowerCase();
+    const scope = searchScope.value;
+    const cat = filterCategory.value;
+    const method = filterMethod.value;
+    const glass = filterGlass.value;
+    const makeable = filterMakeable.value;
+    let visible = recipes.filter(r=>matchesFilters(r,q,scope,cat,selectedIngredients,method,glass,makeable,selectedTaste));
+    if(visible.length === 0){
+      alert('No recipes match your current search/filters.');
+      return;
+    }
+    visible = sortRecipes(visible, currentSortMode, currentSortDirection);
+    const chosen = visible[Math.floor(Math.random() * visible.length)];
+    const idxInVisible = visible.findIndex(r=>r.id===chosen.id);
+    if(idxInVisible >= currentPageSize){
+      currentPageSize = idxInVisible + 1;
+    }
+    render();
+    requestAnimationFrame(()=>{
+      const el = listEl.querySelector(`details[data-id="${chosen.id}"]`);
+      if(el){
+        el.open = true;
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    });
+  });
 })();
 </script>
 </body>
