@@ -993,7 +993,7 @@
   }
 
   /* ---------- Ingredient name parsing (strips leading amount/unit from a line) ---------- */
-  const INGREDIENT_LEAD_RE = /^\s*[\d.,\/]+(?:\s*[-–]\s*[\d.,\/]+)?\s*(ml|cl|l|oz|fl\.?\s?oz|tsp|tbsp|cup|dash(?:es)?|drops?|pinch(?:es)?|klontjes?|klontje|scheutjes?|scheutje|stuks?|stuk|blaadjes?|blaadje|takjes?|takje)?\s*/i;
+  const INGREDIENT_LEAD_RE = /^\s*[\d.,\/]+(?:\s*[-–]\s*[\d.,\/]+)?\s*(ml|cl|l|oz|fl\.?\s?oz|tsp|tbsp|cup|dash(?:es)?|drops?|pinch(?:es)?|slices?|wedges?|spoons?|rinses?|chunks?|grinds?|scoops?|inch(?:es)?|klontjes?|klontje|scheutjes?|scheutje|stuks?|stuk|blaadjes?|blaadje|takjes?|takje)?\s*/i;
   function parseIngredientName(line){
     const stripped = line.replace(INGREDIENT_LEAD_RE, '').trim();
     return stripped || line.trim();
@@ -2108,6 +2108,29 @@
     return Number.isInteger(n) ? String(n) : String(Math.round(n*100)/100);
   }
 
+  // If the ingredient name ends with a unit in parentheses (e.g. "Aromatic Bitters (Dashes)"),
+  // use that as the unit instead of defaulting to "ml", and strip it from the displayed name.
+  const PAREN_UNIT_WORDS = new Set([
+    'dash','dashes','drop','drops','slice','slices','wedge','wedges','spoon','spoons',
+    'rinse','rinses','chunk','chunks','pinch','pinches','grind','grinds','scoop','scoops',
+    'inch','inches'
+  ]);
+  function extractParenUnit(nm){
+    const m = String(nm).match(/^(.*?)\s*\(([A-Za-z]+)\)\s*$/);
+    if(!m) return null;
+    const unit = m[2].toLowerCase();
+    if(!PAREN_UNIT_WORDS.has(unit)) return null;
+    return { cleanName: m[1].trim(), unit };
+  }
+  function buildIngredientLine(nm, amt){
+    const a = fmtAmount(amt);
+    const extracted = extractParenUnit(nm);
+    if(extracted){
+      return a ? `${a} ${extracted.unit} ${extracted.cleanName}` : extracted.cleanName;
+    }
+    return a ? `${a} ml ${nm}` : String(nm);
+  }
+
   async function handleExcelFile(file){
     if(typeof XLSX === 'undefined'){
       alert('The Excel library could not be loaded. Check your internet connection and try again.');
@@ -2230,16 +2253,14 @@
           const nm = get(row, `Alcohol ${n}`);
           const amt = get(row, `Alc-Hoe ${n}`);
           if(nm){
-            const a = fmtAmount(amt);
-            ingredientLines.push(a ? `${a} ml ${nm}` : String(nm));
+            ingredientLines.push(buildIngredientLine(nm, amt));
           }
         }
         for(let n=1;n<=8;n++){
           const nm = get(row, `Vrij ${n}`);
           const amt = get(row, `Vrij-Hoe ${n}`);
           if(nm){
-            const a = fmtAmount(amt);
-            ingredientLines.push(a ? `${a} ml ${nm}` : String(nm));
+            ingredientLines.push(buildIngredientLine(nm, amt));
           }
         }
 
