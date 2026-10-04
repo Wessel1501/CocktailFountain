@@ -1008,9 +1008,41 @@
     return parseFloat(m[1].replace(',', '.'));
   }
 
+  // Units that Excel writes in parentheses behind the ingredient name, e.g. "Aromatic Bitters (Dashes)".
+  const PAREN_UNIT_WORDS = new Set([
+    'dash','dashes','drop','drops','slice','slices','wedge','wedges','spoon','spoons',
+    'rinse','rinses','chunk','chunks','pinch','pinches','grind','grinds','scoop','scoops',
+    'inch','inches'
+  ]);
+  function extractParenUnit(name){
+    const m = String(name).match(/^(.*?)\s*\(([A-Za-z]+)\)\s*$/);
+    if(!m) return null;
+    const unit = m[2].toLowerCase();
+    if(!PAREN_UNIT_WORDS.has(unit)) return null;
+    return { cleanName: m[1].trim(), unit };
+  }
+
+  // Purely cosmetic: doesn't touch the stored line, so ingredient matching/stock/pricing stay unaffected.
+  //  "1 ml Aromatic Bitters (Dashes)" -> "1 dashes Aromatic Bitters"
+  //  "Sugar Syrup (2:1)" (no amount)   -> "Missing Quantity — Sugar Syrup (2:1)"
   function ingredientLineForDisplay(line){
-    // purely cosmetic: doesn't touch the stored line, so ingredient matching/stock/pricing stay unaffected
-    return parseIngredientAmount(line) === null ? `Missing Quantity — ${line}` : line;
+    const amount = parseIngredientAmount(line);
+    if(amount === null){
+      const noAmt = extractParenUnit(line);
+      return `Missing Quantity — ${noAmt ? noAmt.cleanName : line}`;
+    }
+    const m = line.match(/^\s*([\d.,]+)\s*ml\s+(.+)$/i);
+    if(m){
+      const extracted = extractParenUnit(m[2]);
+      if(extracted) return `${m[1]} ${extracted.unit} ${extracted.cleanName}`;
+    }
+    return line;
+  }
+
+  // Name for the one-line preview: same idea, drop a "(Dashes)"-style suffix.
+  function ingredientNameForDisplay(name){
+    const extracted = extractParenUnit(name);
+    return extracted ? extracted.cleanName : name;
   }
 
   function sortedIngredientLines(r){
@@ -1733,7 +1765,7 @@
       det.dataset.id = r.id;
       const icon = getGlassIcon(r.glass);
       const makeableNow = canMake(r);
-      const ingPreview = sortedIngredientLines(r).map(parseIngredientName).join(', ');
+      const ingPreview = sortedIngredientLines(r).map(l=>ingredientNameForDisplay(parseIngredientName(l))).join(', ');
       const priceEst = estimateRecipePrice(r);
 
       det.innerHTML = `
@@ -2108,26 +2140,11 @@
     return Number.isInteger(n) ? String(n) : String(Math.round(n*100)/100);
   }
 
-  // If the ingredient name ends with a unit in parentheses (e.g. "Aromatic Bitters (Dashes)"),
-  // use that as the unit instead of defaulting to "ml", and strip it from the displayed name.
-  const PAREN_UNIT_WORDS = new Set([
-    'dash','dashes','drop','drops','slice','slices','wedge','wedges','spoon','spoons',
-    'rinse','rinses','chunk','chunks','pinch','pinches','grind','grinds','scoop','scoops',
-    'inch','inches'
-  ]);
-  function extractParenUnit(nm){
-    const m = String(nm).match(/^(.*?)\s*\(([A-Za-z]+)\)\s*$/);
-    if(!m) return null;
-    const unit = m[2].toLowerCase();
-    if(!PAREN_UNIT_WORDS.has(unit)) return null;
-    return { cleanName: m[1].trim(), unit };
-  }
+  // NOTE: the stored line deliberately keeps the full original name (e.g. "1 ml Aromatic Bitters (Dashes)")
+  // so that stock, price and filter keys stay stable. The "(Dashes)" -> "dashes" conversion
+  // happens at display time only (see ingredientLineForDisplay).
   function buildIngredientLine(nm, amt){
     const a = fmtAmount(amt);
-    const extracted = extractParenUnit(nm);
-    if(extracted){
-      return a ? `${a} ${extracted.unit} ${extracted.cleanName}` : extracted.cleanName;
-    }
     return a ? `${a} ml ${nm}` : String(nm);
   }
 
